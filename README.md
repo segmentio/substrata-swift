@@ -4,7 +4,7 @@ Small, Efficient, Easy.  Javascript Engine for Swift.
 Using JavascriptCore (and other engines in the future) has been simplified.  No more
 messing with JSValues, type conversion and messy call sites to use Javascript.
 
-NOTE: This project is currently in the Pilot phase and is covered by Segment's [First Access & Beta Preview Terms](https://segment.com/legal/first-access-beta-preview/). We encourage you to try out this new library. Please provide feedback via Github issues/PRs, and feel free to submit pull requests.
+Substrata Swift is currently only available in Beta
 
 ### Quick Start
 
