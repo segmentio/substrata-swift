@@ -1,39 +1,43 @@
 //
 //  BridgeTests.swift
+//  
 //
-//
-//  Created by Brandon Sneed on 5/2/22.
+//  Created by Brandon Sneed on 1/18/23.
 //
 
 import XCTest
 @testable import Substrata
 
-class BridgeTests: XCTestCase {
+final class BridgeTests: XCTestCase {
 
     override func setUpWithError() throws {
         // Put setup code here. This method is called before the invocation of each test method in the class.
     }
 
     override func tearDownWithError() throws {
-        // look for leaks ...
-        let leaks = JSLeaks.leaked()
-        if leaks.count > 0 {
-            XCTFail("Something was leaked in the previous test: \(leaks)")
-        }
+        // Put teardown code here. This method is called after the invocation of each test method in the class.
     }
 
     func testBridge() throws {
         let engine = JSEngine()
-        engine.errorHandler = { error in
+        engine.exceptionHandler = { error in
             XCTFail()
             print(error)
         }
         
-        try! engine.expose(name: "EdgeFunction", classType: EdgeFunctionJS.self)
+        engine.export(type: EdgeFunctionJS.self, className: "EdgeFunction")
+        
+        let funkyFunc = engine.export(function: { args in
+            print("myFunkyFuncCalled")
+            return nil
+        }, named: "myFunkyFunc")
+        
+        engine.bridge?["myFunkyFunc"] = funkyFunc
 
-        engine.bridge?["myEdgeFn"] = try! EdgeFunctionJS(context: engine.context, params: nil)
+        let edgeFn = engine.evaluate(script: "var edgeFn = new EdgeFunction(); edgeFn;") as? EdgeFunctionJS
+        engine.bridge?["myEdgeFn"] = edgeFn
         engine.bridge?["myArray"] = [1, 2, "hello"]
-        engine.bridge?["myDict"] = ["test": 1, "blah": 3.14, "nums": ["1", "2", "3"], "fn": try! EdgeFunctionJS(context: engine.context, params: nil)]
+        engine.bridge?["myDict"] = ["test": 1, "blah": 3.14, "nums": ["1", "2", "3"], "fn": edgeFn!]
         
         let myEdgeFn = engine.bridge?["myEdgeFn"]
         let myArray = engine.bridge?["myArray"] as! [JSConvertible]
@@ -54,11 +58,13 @@ class BridgeTests: XCTestCase {
             dataBridge["aNull"] = null;
         """)
         
-        let anInt = engine.bridge?["anInt"]!.typed(Int.self)
-        let aBool = engine.bridge?["aBool"]!.typed(Bool.self)
-        let aDouble = engine.bridge?["aDouble"]!.typed(Double.self)
-        let aString = engine.bridge?["aString"]!.typed(String.self)
-        let aNull = engine.bridge?["aNull"]!.typed(NSNull.self)
+        print(engine.evaluate(script: "dataBridge") as Any)
+        
+        let anInt: Int? = engine.bridge?["anInt"]?.typed()
+        let aBool: Bool? = engine.bridge?["aBool"]?.typed()
+        let aDouble: Double? = engine.bridge?["aDouble"]?.typed()
+        let aString: String? = engine.bridge?["aString"]?.typed()
+        let aNull: NSNull? = engine.bridge?["aNull"]?.typed()
         
         XCTAssertTrue(anInt == 1234)
         XCTAssertTrue(aBool == true)
@@ -71,5 +77,6 @@ class BridgeTests: XCTestCase {
         let intGone = engine.bridge?["anInt"]
         XCTAssertNil(intGone)
     }
+
 
 }

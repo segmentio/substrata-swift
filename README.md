@@ -6,6 +6,8 @@ messing with JSValues, type conversion and messy call sites to use Javascript.
 
 Substrata Swift is currently only available in Beta
 
+### Type Mappings
+
 ### Quick Start
 
 Values are converted automatically to the appropriate types

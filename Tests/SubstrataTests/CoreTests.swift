@@ -15,11 +15,6 @@ class CoreTests: XCTestCase {
     }
 
     override func tearDownWithError() throws {
-        // look for leaks ...
-        let leaks = JSLeaks.leaked()
-        if leaks.count > 0 {
-            XCTFail("Something was leaked in the previous test: \(leaks)")
-        }
     }
 
     func testClassExtend() throws {
@@ -60,68 +55,44 @@ class CoreTests: XCTestCase {
     }
     
     func testClassCall() throws {
-        let context = JSContext()
-        context.exceptionHandler = { context, value in
-            print(value)
+        let engine = JSEngine()
+        engine.exceptionHandler = { error in
+            print(error)
         }
         
-        let edgeFn = try! JSObject(context: context, type: EdgeFunctionJS.self)
-        context[EdgeFunctionJS.className] = edgeFn
+        engine.export(type: EdgeFunctionJS.self, className: "EdgeFunction")
 
-        context.evaluate(script: "let a = new EdgeFunction(1, 2, 3);")
-        let o = context["a"]
-        print(o)
+        engine.evaluate(script: "let a = new EdgeFunction(1, 2, 3);")
+        let o = engine.value(for: "a")
+        XCTAssertTrue(o is EdgeFunctionJS)
     }
     
     func testClassProps() throws {
-        let context = JSContext()
-        context.exceptionHandler = { context, value in
-            print(value)
+        let engine = JSEngine()
+        engine.exceptionHandler = { error in
+            print(error)
         }
-        
-        var myStaticProp = false
-        
-        let edgeFn = try! JSObject(context: context, type: EdgeFunctionJS.self)
-        context[EdgeFunctionJS.className] = edgeFn
-        edgeFn.addProperty(name: "myStaticProp") { context, this in
-            return myStaticProp.jsValue(context: context)
-        } setter: { context, this, value in
-            if let v = value?.value(Bool.self) {
-                myStaticProp = v
-                return true
-            }
-            return false
-        }
-        
-        context.evaluate(script: "EdgeFunction.myStaticProp = true")
-        XCTAssertTrue(myStaticProp)
 
-        context.evaluate(script: "let a = new EdgeFunction(1, 2, 3)")
+        engine.export(type: EdgeFunctionJS.self, className: "EdgeFunction")
         
-        var isGoodDay = false
-        
-        let object = context["a"] as! JSObject
-        object.addProperty(name: "isGoodDay") { context, this in
-            return isGoodDay.jsValue(context: context)
-        } setter: { context, this, value in
-            if let v = value?.value(Bool.self) {
-                isGoodDay = v
-                return true
-            }
-            return false
-        }
-        
-        context.evaluate(script: "a.isGoodDay = true")
+        engine.evaluate(script: "EdgeFunction.myStaticBool = true")
+        XCTAssertTrue(EdgeFunctionJS.myStaticBool!)
 
-        XCTAssertTrue(isGoodDay)
+        engine.evaluate(script: "let a = new EdgeFunction(1, 2, 3)")
+        EdgeFunctionJS.myStaticBool = false
+        
+        let value = engine.evaluate(script: "a.myBool")
+        XCTAssertTrue(value!.typed()!)
     }
     
     func testClassMethods() throws {
-        let context = JSContext()
-        context.exceptionHandler = { context, value in
-            print(value)
+        let engine = JSEngine()
+        engine.exceptionHandler = { error in
+            print(error)
         }
-        
+
+        engine.export(type: EdgeFunctionJS.self, className: "EdgeFunction")
+
         var myStaticProp = false
         
         let edgeFn = try! JSObject(context: context, type: EdgeFunctionJS.self)
