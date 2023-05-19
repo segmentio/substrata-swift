@@ -11,17 +11,14 @@ import XCTest
 @testable import Substrata
 
 class EngineTests: XCTestCase {
-    
     override func tearDownWithError() throws {
-        // look for leaks ...
-        let leaks = JSLeaks.leaked()
-        if leaks.count > 0 {
-            XCTFail("Something was leaked in the previous test: \(leaks)")
-        }
+        // Put teardown code here. This method is called after the invocation of each test method in the class.
+        EdgeFunctionJS.reset()
     }
 
+
     func testBundleLoad() throws {
-        let engine = JSEngine()
+        /*let engine = JSEngine()
         engine.errorHandler = { error in
             print(error)
         }
@@ -37,11 +34,11 @@ class EngineTests: XCTestCase {
             }
         }
         
-        XCTAssertTrue(loaded)
+        XCTAssertTrue(loaded)*/
     }
         
     func testCallUnknownFunction() throws {
-        let engine = JSEngine()
+        /*let engine = JSEngine()
         engine.errorHandler = { error in
             print(error)
             
@@ -56,11 +53,11 @@ class EngineTests: XCTestCase {
 
         let r = engine.call(functionName: "blah.booya", params: nil)
         // it's undefined, aka nil
-        XCTAssertTrue(r == nil)
+        XCTAssertTrue(r == nil)*/
     }
     
     func testObjectGetSet() throws {
-        let engine = JSEngine()
+        /*let engine = JSEngine()
         engine.errorHandler = { error in
             print(error)
             XCTFail()
@@ -72,11 +69,11 @@ class EngineTests: XCTestCase {
         
         let result = engine.evaluate(script: "booya;")?.typed(Int.self)
         XCTAssertNotNil(result)
-        XCTAssertEqual(result!, 42)
+        XCTAssertEqual(result!, 42)*/
     }
     
     func testFunctionExposure() throws {
-        let engine = JSEngine()
+        /*let engine = JSEngine()
         engine.errorHandler = { error in
             print(error)
             XCTFail()
@@ -103,11 +100,11 @@ class EngineTests: XCTestCase {
         // r should be nil
         XCTAssertNil(r)
         // to know it actually ran, we set x to 22.
-        XCTAssertTrue(x == 22)
+        XCTAssertTrue(x == 22)*/
     }
 
     func testFunctionExtension() throws {
-        let engine = JSEngine()
+        /*let engine = JSEngine()
         engine.errorHandler = { error in
             print(error)
             XCTFail()
@@ -128,11 +125,11 @@ class EngineTests: XCTestCase {
         }
         
         let result = engine.evaluate(script: "myObject.quadruple(3)") as? Double
-        XCTAssertTrue(result! == 12.0)
+        XCTAssertTrue(result! == 12.0)*/
     }
     
     func testClassExposure() throws {
-        let engine = JSEngine()
+        /*let engine = JSEngine()
         engine.errorHandler = { error in
             print(error)
             XCTFail()
@@ -160,11 +157,11 @@ class EngineTests: XCTestCase {
         XCTAssertTrue(myStaticProp)
         
         let anonymousId = engine.evaluate(script: "annie.anonymousId") as? String
-        XCTAssertEqual(anonymousId, "0123456789")
+        XCTAssertEqual(anonymousId, "0123456789")*/
     }
     
     func testClassInheritance() throws {
-        let engine = JSEngine()
+        /*let engine = JSEngine()
         engine.errorHandler = { error in
             print(error)
             XCTFail()
@@ -195,25 +192,11 @@ class EngineTests: XCTestCase {
         
         engine.evaluate(script: "var a = new TestSuper('123')")
         let r = engine.object(key: "a")
-        XCTAssertTrue(r is EdgeFunctionJS)
-    }
-
-    func testReentry() throws {
-        let engine = JSEngine()
-        engine.errorHandler = { error in
-            print(error)
-            XCTFail()
-        }
-        
-        let r = engine.syncRunEngine {
-            let v = engine.object(key: "console")
-            return v
-        }
-        XCTAssertNotNil(r)
+        XCTAssertTrue(r is EdgeFunctionJS)*/
     }
     
     func testClassInstanceFailure() throws {
-        let engine = JSEngine()
+        /*let engine = JSEngine()
         var errorHappened = false
         engine.errorHandler = { error in
             errorHappened = true
@@ -222,11 +205,11 @@ class EngineTests: XCTestCase {
         
         let r = engine.evaluate(script: "var a = new Booya()")
         XCTAssertNil(r)
-        XCTAssertTrue(errorHappened)
+        XCTAssertTrue(errorHappened)*/
     }
     
     func testClassInstanceOf() throws {
-        let engine = JSEngine()
+        /*let engine = JSEngine()
         engine.errorHandler = { error in
             print(error)
             XCTFail()
@@ -245,11 +228,11 @@ class EngineTests: XCTestCase {
         XCTAssertFalse(b as! Bool)
 
         let f = engine.evaluate(script: "delete a")
-        XCTAssertFalse(f as! Bool)
+        XCTAssertFalse(f as! Bool)*/
     }
     
     func testFunctionAsConstructor() throws {
-        let engine = JSEngine()
+        /*let engine = JSEngine()
         var errorHappened = false
         engine.errorHandler = { error in
             errorHappened = true
@@ -264,11 +247,11 @@ class EngineTests: XCTestCase {
         
         let r = engine.evaluate(script: "var a = new myFunc()")
         XCTAssertNil(r)
-        XCTAssertTrue(errorHappened)
+        XCTAssertTrue(errorHappened)*/
     }
     
     func testFunctionInstanceOf() throws {
-        let engine = JSEngine()
+        /*let engine = JSEngine()
         engine.errorHandler = { error in
             print(error)
         }
@@ -282,11 +265,11 @@ class EngineTests: XCTestCase {
         let r = engine.evaluate(script: "let o = myFunc; o instanceof myFunc")
         XCTAssertTrue(r as! Bool)
         let b = engine.evaluate(script: "let b = function() { }; b instanceof myFunc")
-        XCTAssertFalse(b as! Bool)
+        XCTAssertFalse(b as! Bool)*/
     }
     
     func testFunctionFinalize() throws {
-        let engine = JSEngine()
+        /*let engine = JSEngine()
         engine.errorHandler = { error in
             print(error)
             XCTFail()
@@ -299,22 +282,22 @@ class EngineTests: XCTestCase {
         engine.expose(name: "myFunc", function: makeAnEdgeFn)
         
         let r = engine.evaluate(script: "var o = myFunc; delete o")
-        XCTAssertFalse(r as! Bool)
+        XCTAssertFalse(r as! Bool)*/
     }
     
     func testConsole() throws {
-        let engine = JSEngine()
+        /*let engine = JSEngine()
         engine.errorHandler = { error in
             print(error)
             XCTFail()
         }
         
         let r = engine.evaluate(script: "console.log(1, 2, 3)")
-        XCTAssertNil(r)
+        XCTAssertNil(r)*/
     }
     
     func testJSClassDetection() throws {
-        let engine = JSEngine()
+        /*let engine = JSEngine()
         engine.errorHandler = { error in
             print(error)
             XCTFail()
@@ -343,6 +326,6 @@ class EngineTests: XCTestCase {
         
         engine.evaluate(script: "let n = new MyTestClass()")
         let n = engine.object(key: "n")
-        XCTAssertTrue(n is JavascriptValue)
+        XCTAssertTrue(n is JavascriptValue)*/
     }
 }

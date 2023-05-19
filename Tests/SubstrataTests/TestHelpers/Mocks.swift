@@ -12,6 +12,8 @@ class EdgeFunctionJS: JSExport, JSStatic {
     static var myStaticBool: Bool? = false
     var myBool: Bool? = false
     
+    static func reset() { myStaticBool = false }
+    
     static func staticInit() {
         export(property: JSProperty(getter: {
             return myStaticBool

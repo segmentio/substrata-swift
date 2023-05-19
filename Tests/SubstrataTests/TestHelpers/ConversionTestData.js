@@ -6,7 +6,7 @@ const conversionSamples = {
     aString: "booya",
 	aNull: null,
     anArray: [
-        new EdgeFunction(),
+        new EdgeFunction(true),
         "test1",
         "test2",
         "test3",
@@ -39,7 +39,7 @@ const conversionSamples = {
             aBool: true,
             anotherBool: false,
             aDouble: 3.14,
-            anEdgeFn: new EdgeFunction(),
+            anEdgeFn: new EdgeFunction(true),
             aString: "booya",
             anArray: [
                 "test1",

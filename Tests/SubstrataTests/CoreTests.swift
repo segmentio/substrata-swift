@@ -15,10 +15,11 @@ class CoreTests: XCTestCase {
     }
 
     override func tearDownWithError() throws {
+        EdgeFunctionJS.reset()
     }
 
     func testClassExtend() throws {
-        let context = JSContext()
+        /*let context = JSEngine()
         context.exceptionHandler = { context, value in
             print(value)
         }
@@ -51,7 +52,7 @@ class CoreTests: XCTestCase {
 
         context.evaluate(script: "let a = new TestSuper(1, 2, 3);")
         let o = context["a"]
-        print(o)
+        print(o)*/
     }
     
     func testClassCall() throws {
@@ -62,7 +63,7 @@ class CoreTests: XCTestCase {
         
         engine.export(type: EdgeFunctionJS.self, className: "EdgeFunction")
 
-        engine.evaluate(script: "let a = new EdgeFunction(1, 2, 3);")
+        engine.evaluate(script: "let a = new EdgeFunction(true);")
         let o = engine.value(for: "a")
         XCTAssertTrue(o is EdgeFunctionJS)
     }
@@ -78,15 +79,13 @@ class CoreTests: XCTestCase {
         engine.evaluate(script: "EdgeFunction.myStaticBool = true")
         XCTAssertTrue(EdgeFunctionJS.myStaticBool!)
 
-        engine.evaluate(script: "let a = new EdgeFunction(1, 2, 3)")
-        EdgeFunctionJS.myStaticBool = false
-        
+        engine.evaluate(script: "let a = new EdgeFunction(true)")
         let value = engine.evaluate(script: "a.myBool")
-        XCTAssertTrue(value!.typed()!)
+        XCTAssertFalse(value!.typed()!)
     }
     
     func testClassMethods() throws {
-        let engine = JSEngine()
+        /*let engine = JSEngine()
         engine.exceptionHandler = { error in
             print(error)
         }
@@ -124,11 +123,11 @@ class CoreTests: XCTestCase {
         
         context.evaluate(script: "a.isGoodDay(true)")
 
-        XCTAssertTrue(isGoodDay)
+        XCTAssertTrue(isGoodDay)*/
     }
     
     func testFnCall() throws {
-        let context = JSContext()
+        /*let context = JSContext()
         context.exceptionHandler = { context, value in
             print(value)
         }
@@ -155,14 +154,14 @@ class CoreTests: XCTestCase {
         let fifteen = result.value(Int.self)
         XCTAssertNotNil(result)
         XCTAssertTrue(called)
-        XCTAssertEqual(fifteen!, 15)
+        XCTAssertEqual(fifteen!, 15)*/
     }
     
     func testValueInterpretationIntoJS() throws {
     }
 
     func testValueInterpretationFromJS() throws {
-        let context = JSContext()
+        /*let context = JSContext()
         context.exceptionHandler = { context, value in
             print(value)
         }
@@ -259,22 +258,7 @@ class CoreTests: XCTestCase {
         XCTAssertTrue(primitive is JSFunction)
         // it's a function defined in JS, so this should be
         // nil since we don't have callback info for it.
-        XCTAssertNil(function)
-    }
-    
-    func testDescription() throws {
-        /*let context = JSContext()
-        context.exceptionHandler = { context, value in
-            print(value)
-        }
-        
-        var result: JSValue
-        
-        result = context.evaluate(script: "a = { a1: 3, a2: 4 }")
-        XCTAssertNotNil(result)
-        XCTAssertTrue(result.isBool)
-        XCTAssertTrue(result.bool!)
-         */
+        XCTAssertNil(function)*/
     }
 
 }

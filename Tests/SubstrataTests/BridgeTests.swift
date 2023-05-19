@@ -16,6 +16,7 @@ final class BridgeTests: XCTestCase {
 
     override func tearDownWithError() throws {
         // Put teardown code here. This method is called after the invocation of each test method in the class.
+        EdgeFunctionJS.reset()
     }
 
     func testBridge() throws {
@@ -34,7 +35,7 @@ final class BridgeTests: XCTestCase {
         
         engine.bridge?["myFunkyFunc"] = funkyFunc
 
-        let edgeFn = engine.evaluate(script: "var edgeFn = new EdgeFunction(); edgeFn;") as? EdgeFunctionJS
+        let edgeFn = engine.evaluate(script: "var edgeFn = new EdgeFunction(true); edgeFn;") as? EdgeFunctionJS
         engine.bridge?["myEdgeFn"] = edgeFn
         engine.bridge?["myArray"] = [1, 2, "hello"]
         engine.bridge?["myDict"] = ["test": 1, "blah": 3.14, "nums": ["1", "2", "3"], "fn": edgeFn!]
