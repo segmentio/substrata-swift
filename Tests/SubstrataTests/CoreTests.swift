@@ -17,42 +17,156 @@ class CoreTests: XCTestCase {
     override func tearDownWithError() throws {
         EdgeFunctionJS.reset()
     }
-
-    func testClassExtend() throws {
-        /*let context = JSEngine()
-        context.exceptionHandler = { context, value in
-            print(value)
+    
+    func testDefaultInheritance() throws {
+        let engine = JSEngine()
+        engine.exceptionHandler = { error in
+            print(error)
         }
         
-        let edgeFn = try! JSObject(context: context, type: EdgeFunctionJS.self)
-        context[EdgeFunctionJS.className] = edgeFn
+        engine.evaluate(script: """
+        class MyClass {
+            constructor(blah) {
+                console.log(blah)
+            }
+        
+            myFunction(param1) {
+                console.log("myFunction called.")
+            }
+        }
+        """)
+        
+        engine.evaluate(script: """
+        class MyOtherClass extends MyClass {
+            constructor(blah) {
+                super(blah)
+            }
+        
+            myFunction(param1) {
+                console.log("MyOtherClass.myFunction called.")
+                super.myFunction(param1, param2)
+            }
+        
+            execute(param1) {
+                console.log("MyOtherClass.execute called.")
+            }
+        }
+        """)
+        
+        engine.evaluate(script: """
+        function printPrototype(obj, i) {
+            var n = Number(i || 0);
+            var indent = Array(2 + n).join("-");
 
-        //context.evaluate(script: "EdgeFunction.prototype = {}")
-        context.evaluate(script: """
+            for(var key in obj) {
+                if(obj.hasOwnProperty(key)) {
+                    console.log(indent, key, ": ", obj[key]);
+                }
+            }
+
+            if(obj) {
+                if(Object.getPrototypeOf) {
+                    printPrototype(Object.getPrototypeOf(obj), n + 1);
+                } else if(obj.__proto__) {
+                    printPrototype(obj.__proto__, n + 1);
+                }
+            }
+        }
+        """)
+        
+        engine.evaluate(script: "let a = new MyClass(true);")
+        engine.evaluate(script: "a.myFunction(true);")
+        engine.evaluate(script: "printPrototype(a);")
+        
+        engine.evaluate(script: "let b = new MyOtherClass(true);")
+        engine.evaluate(script: "printPrototype(b);")
+        engine.evaluate(script: "console.log(TestSuper);")
+        engine.evaluate(script: "b.myFunction(false)")
+        engine.evaluate(script: "b.execute('hello');")
+
+    }
+
+    func testClassExtend() throws {
+        let engine = JSEngine()
+        engine.exceptionHandler = { error in
+            print(error)
+        }
+        
+        engine.export(type: EdgeFunctionJS.self, className: "EdgeFunction")
+        engine.evaluate(script: """
         class TestSuper extends EdgeFunction {
-            constructor(type, destination) {
-                //console.log("js: TestSuper.constructor() called")
-                super(type, destination);
+            constructor(thing) {
+                console.log("js: TestSuper.constructor() called")
+                super(thing);
+                return this;
             }
             
             update(settings, type) {
-                //console.log("js: TestSuper.update() called")
+                console.log("js: TestSuper.update() called")
                 if (type == true) {
-                    //console.log(settings)
+                    console.log(settings)
                 }
             }
             
             execute(event) {
-                //console.log("js: TestSuper.execute() called");
-                //console.log(typeof this)
-                //return super.execute(event);
+                console.log("js: TestSuper.execute() called");
+                console.log(typeof this)
+                return super.execute(event);
+            }
+        
+            myInstanceMethod(arg) {
+                console.log("js: TestSuper.myInstanceMethod() called");
+                print("thing is busted")
+                return 1337
             }
         };
-        """)
+        
+        function printPrototype(obj, i) {
+            var n = Number(i || 0);
+            var indent = Array(2 + n).join("-");
 
-        context.evaluate(script: "let a = new TestSuper(1, 2, 3);")
-        let o = context["a"]
-        print(o)*/
+            for(var key in obj) {
+                if(obj.hasOwnProperty(key)) {
+                    console.log(indent, key, ": ", obj[key]);
+                }
+            }
+
+            if(obj) {
+                if(Object.getPrototypeOf) {
+                    printPrototype(Object.getPrototypeOf(obj), n + 1);
+                } else if(obj.__proto__) {
+                    printPrototype(obj.__proto__, n + 1);
+                }
+            }
+        }
+        """)
+        
+        /*engine.evaluate(script: """
+        var proto = Object.getPrototypeOf(EdgeFunction);
+        if (proto) {
+            console.log(proto.hasOwnProperty('constructor') ? proto.constructor.name : 'undefined');
+        } else {
+            console.log("we don't have a fucking prototype")
+        }
+        """)*/
+
+        engine.evaluate(script: "printPrototype(console);")
+        engine.evaluate(script: "printPrototype(EdgeFunction);")
+        engine.evaluate(script: "console.log(EdgeFunction.myStaticBool);")
+        
+        engine.evaluate(script: "let a = new EdgeFunction(true);")
+        engine.evaluate(script: "a.myInstanceMethod(true);")
+        engine.evaluate(script: "printPrototype(a);")
+        
+        engine.evaluate(script: "printPrototype(TestSuper);")
+        engine.evaluate(script: "let b = new TestSuper(true);")
+        engine.evaluate(script: "printPrototype(b);")
+        engine.evaluate(script: "console.log(TestSuper);")
+        let r = engine.evaluate(script: "b.myInstanceMethod(false)")
+        print(r)
+        engine.evaluate(script: "b.execute('hello');")
+        engine.evaluate(script: "console.log(b.hasOwnProperty('execute'));")
+        engine.evaluate(script: "console.log(b.hasOwnProperty('myInstanceMethod'));")
     }
     
     func testClassCall() throws {

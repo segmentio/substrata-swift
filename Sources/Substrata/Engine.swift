@@ -92,7 +92,6 @@ public class JSEngine {
         var result: JSConvertible? = nil
         jsQueue.sync {
             let script = JSStringRefWrapper(value: script)
-            var exception: JSValueRef? = nil
             let value = JSEvaluateScript(globalContext, script.ref, nil, nil, 0, &exception)
             result = valueRefToType(context: globalContext, value: value)
         }
@@ -105,29 +104,19 @@ public class JSEngine {
             let context = globalContext
             let classRef = genericClassCreate(type, name: className)
             exposedClasses[className] = classRef
-            let classObject = JSObjectMake(context, classRef, nil)
             
             let info: UnsafeMutablePointer<JSExportInfo> = .allocate(capacity: 1)
             info.initialize(to: JSExportInfo(type: type, jsClassRef: classRef, instance: nil, callback: nil))
-            JSObjectSetPrivate(classObject, info)
-            
-            let globalObject = JSContextGetGlobalObject(context)
-            let name = JSStringRefWrapper(value: className)
-            JSObjectSetProperty(context, globalObject, name.ref, classObject, JSPropertyAttributes(kJSPropertyAttributeNone), &exception)
+            let classObject = JSObjectMake(context, classRef, info)!
             
             if let t = type as? JSStatic.Type {
                 t.staticInit()
             }
             
-            for (key, value) in type.exportMethods {
-                let name = JSStringRefWrapper(value: key)
-                let functionRef = genericFunctionCreate(value)
-                let info: UnsafeMutablePointer<JSExportInfo> = .allocate(capacity: 1)
-                info.initialize(to: JSExportInfo(type: nil, jsClassRef: functionRef, instance: nil, callback: value))
-                let functionObject = JSObjectMake(context, functionRef, nil)
-                JSObjectSetPrivate(functionObject, info)
-                JSObjectSetProperty(context, classObject, name.ref, functionObject, JSPropertyAttributes(kJSPropertyAttributeNone), &exception)
-            }
+            print("updating prototype for class \(String(describing: info.pointee.type))")
+            updatePrototype(object: classObject, context: context, properties: type.exportProperties, methods: type.exportMethods)
+            let name = JSStringRefWrapper(value: className)
+            JSObjectSetProperty(context, globalObject, name.ref, classObject, JSPropertyAttributes(kJSPropertyAttributeNone), &exception)
         }
     }
     

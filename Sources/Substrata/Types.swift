@@ -12,10 +12,6 @@ import JavaScriptCore
 import CJavaScriptCore
 #endif
 
-public protocol JSStatic {
-    static func staticInit()
-}
-
 public protocol JSConvertible {
     static func from(jsValue: JSValueRef, context: JSContextRef) -> Self?
     func jsValue(context: JSContextRef) -> JSValueRef?
