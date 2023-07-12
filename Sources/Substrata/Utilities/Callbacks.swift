@@ -16,13 +16,14 @@ internal func genericClassCreate(_ type: JSExport.Type, name: String) -> JSClass
     var classDefinition = JSClassDefinition()
     let classRef: JSClassRef = name.withCString { cName in
         classDefinition.className = cName
+        //classDefinition.attributes = JSClassAttributes(kJSClassAttributeNoAutomaticPrototype)
         classDefinition.attributes = JSClassAttributes(kJSClassAttributeNone)
         classDefinition.callAsConstructor = class_constructor
         classDefinition.finalize = class_finalize
         classDefinition.hasInstance = class_instanceof
         classDefinition.getProperty = property_getter
         classDefinition.setProperty = property_setter
-        classDefinition.hasProperty = property_checker
+        //classDefinition.hasProperty = property_checker
         return JSClassCreate(&classDefinition)
     }
     return classRef
@@ -68,9 +69,9 @@ internal func updatePrototype(object: JSObjectRef?, context: JSContextRef, prope
         }
     }
     
-    let prototypeName = JSStringRefWrapper(value: "prototype")
+    //let prototypeName = JSStringRefWrapper(value: "__proto__")
     JSObjectSetPrototype(context, object, prototype)
-    JSObjectSetProperty(context, object, prototypeName.ref, prototype, JSPropertyAttributes(kJSPropertyAttributeNone), nil)
+    //JSObjectSetProperty(context, object, prototypeName.ref, prototype, JSPropertyAttributes(kJSPropertyAttributeNone), nil)
 }
 
 internal func class_instanceof(
@@ -104,8 +105,8 @@ internal func class_constructor(
     JSObjectSetPrivate(newObject, instanceInfo)
     instance.valueRef = newObject
     
-    print("updating prototype for instance of \(String(describing: info.pointee.type))")
-    updatePrototype(object: newObject, context: context, properties: instance.exportProperties, methods: instance.exportMethods)
+    //print("updating prototype for instance of \(String(describing: info.pointee.type))")
+    //updatePrototype(object: newObject, context: context, properties: instance.exportProperties, methods: instance.exportMethods)
     
     let nativeArgs = (0..<argumentCount).map { valueRefToType(context: context, value: arguments![$0]!) }
     instance.construct(args: nativeArgs)
@@ -127,25 +128,35 @@ internal func property_getter(
 ) -> JSValueRef? {
     guard let context = ctx else { return nil }
     guard let propertyName = propertyName else { return nil }
+    guard let propName = String.from(jsString: propertyName) else { return nil }
     
     var result: JSValueRef? = nil
 
     let info = JSObjectGetPrivate(object).assumingMemoryBound(to: JSExportInfo.self)
     
     // check if it's an instance
-    let props = info.pointee.instance?.exportProperties
-    /*if props == nil {
+    var props = info.pointee.instance?.exportProperties
+    if props == nil {
         // it's not, so fall back to the static props.
         props = info.pointee.type?.exportProperties
-    }*/
+    }
     
     if let props = props {
-        guard let propName = String.from(jsString: propertyName) else { return nil }
         if let property = props[propName] {
             let value = property.getter()
             result = jsTyped(value, context: context)
         }
     }
+    
+    if result == nil && propName == "prototype" {
+        return JSObjectGetPrototype(context, object)
+    }
+    
+    /*if result == nil && propName == "hasOwnProperty" {
+        return JSObjectGetPrototype(context, object)
+    }*/
+    
+
     return result
 }
 
@@ -164,11 +175,11 @@ internal func property_setter(
     let info = JSObjectGetPrivate(object).assumingMemoryBound(to: JSExportInfo.self)
     
     // check if it's an instance
-    let props = info.pointee.instance?.exportProperties
-    /*if props == nil {
+    var props = info.pointee.instance?.exportProperties
+    if props == nil {
         // it's not, so fall back to the static props.
         props = info.pointee.type?.exportProperties
-    }*/
+    }
     
     guard let propName = String.from(jsString: propertyName) else { return false }
     if let props = props, let property = props[propName], let setter = property.setter {
@@ -185,8 +196,18 @@ internal func property_checker(
     _ propertyName: JSStringRef?
 ) -> Bool {
     guard let propertyName = propertyName else { return false }
+    guard let propName = String.from(jsString: propertyName) else { return false }
     
     var result: Bool = false
+    
+    print("Checking for property \(propName)...")
+    
+    switch propName {
+    case "prototype": return true
+    case "hasOwnProperty": return false
+    default:
+        break
+    }
 
     let info = JSObjectGetPrivate(object).assumingMemoryBound(to: JSExportInfo.self)
     
@@ -204,7 +225,6 @@ internal func property_checker(
         methods = info.pointee.type?.exportMethods
     }
     
-    guard let propName = String.from(jsString: propertyName) else { return false }
     if let props, props[propName] != nil {
         result = true
     }

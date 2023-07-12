@@ -113,7 +113,7 @@ public class JSEngine {
                 t.staticInit()
             }
             
-            print("updating prototype for class \(String(describing: info.pointee.type))")
+            //print("updating prototype for class \(String(describing: info.pointee.type))")
             updatePrototype(object: classObject, context: context, properties: type.exportProperties, methods: type.exportMethods)
             let name = JSStringRefWrapper(value: className)
             JSObjectSetProperty(context, globalObject, name.ref, classObject, JSPropertyAttributes(kJSPropertyAttributeNone), &exception)
