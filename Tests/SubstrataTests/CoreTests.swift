@@ -150,13 +150,13 @@ class CoreTests: XCTestCase {
         }
         """)*/
 
-        engine.evaluate(script: "printPrototype(console);")
+        /*engine.evaluate(script: "printPrototype(console);")
         engine.evaluate(script: "printPrototype(EdgeFunction);")
         engine.evaluate(script: "console.log(EdgeFunction.myStaticBool);")
         
         engine.evaluate(script: "let a = new EdgeFunction(true);")
         engine.evaluate(script: "a.myInstanceMethod(true);")
-        engine.evaluate(script: "printPrototype(a);")
+        engine.evaluate(script: "printPrototype(a);")*/
         
         engine.evaluate(script: "printPrototype(TestSuper);")
         engine.evaluate(script: "let b = new TestSuper(true);")

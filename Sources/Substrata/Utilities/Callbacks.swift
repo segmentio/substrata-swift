@@ -19,10 +19,10 @@ internal func genericClassCreate(_ type: JSExport.Type, name: String) -> JSClass
         //classDefinition.attributes = JSClassAttributes(kJSClassAttributeNoAutomaticPrototype)
         classDefinition.attributes = JSClassAttributes(kJSClassAttributeNone)
         classDefinition.callAsConstructor = class_constructor
-        classDefinition.finalize = class_finalize
-        classDefinition.hasInstance = class_instanceof
-        classDefinition.getProperty = property_getter
-        classDefinition.setProperty = property_setter
+        //classDefinition.finalize = class_finalize
+        //classDefinition.hasInstance = class_instanceof
+        //classDefinition.getProperty = property_getter
+        //classDefinition.setProperty = property_setter
         //classDefinition.hasProperty = property_checker
         return JSClassCreate(&classDefinition)
     }
@@ -69,9 +69,9 @@ internal func updatePrototype(object: JSObjectRef?, context: JSContextRef, prope
         }
     }
     
-    //let prototypeName = JSStringRefWrapper(value: "__proto__")
+    let prototypeName = JSStringRefWrapper(value: "prototype")
     JSObjectSetPrototype(context, object, prototype)
-    //JSObjectSetProperty(context, object, prototypeName.ref, prototype, JSPropertyAttributes(kJSPropertyAttributeNone), nil)
+    JSObjectSetProperty(context, object, prototypeName.ref, prototype, JSPropertyAttributes(kJSPropertyAttributeNone), nil)
 }
 
 internal func class_instanceof(

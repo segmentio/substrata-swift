@@ -108,6 +108,8 @@ public class JSEngine {
             let info: UnsafeMutablePointer<JSExportInfo> = .allocate(capacity: 1)
             info.initialize(to: JSExportInfo(type: type, jsClassRef: classRef, instance: nil, callback: nil))
             let classObject = JSObjectMake(context, classRef, info)!
+            //let classObject = JSObjectMakeConstructor(context, classRef, nil)
+            //JSObjectSetPrivate(classObject, info)
             
             if let t = type as? JSStatic.Type {
                 t.staticInit()
