@@ -12,6 +12,13 @@ import JavaScriptCore
 import CJavaScriptCore
 #endif
 
+struct JSClassInfo {
+    let classRef: JSClassRef
+    let nativeType: JSExport.Type
+}
+
+var JSExportClass = [JSObjectRef: JSClassInfo]()
+
 public class JSEngine {
     private let contextGroup: JSContextGroupRef
     private let globalContext: JSGlobalContextRef
@@ -107,9 +114,14 @@ public class JSEngine {
             
             let info: UnsafeMutablePointer<JSExportInfo> = .allocate(capacity: 1)
             info.initialize(to: JSExportInfo(type: type, jsClassRef: classRef, instance: nil, callback: nil))
-            let classObject = JSObjectMake(context, classRef, info)!
-            //let classObject = JSObjectMakeConstructor(context, classRef, nil)
-            //JSObjectSetPrivate(classObject, info)
+            //let classObject = JSObjectMake(context, classRef, info)!
+            let classObject = JSObjectMakeConstructor(context, classRef, class_constructor)!
+            /*let canSetPrivate = JSObjectSetPrivate(classObject, info)
+            if canSetPrivate == false {
+                print("JSObjectSetPrivate failed on \(className)")
+            }*/
+            
+            JSExportClass[classObject] = JSClassInfo(classRef: classRef, nativeType: type)
             
             if let t = type as? JSStatic.Type {
                 t.staticInit()

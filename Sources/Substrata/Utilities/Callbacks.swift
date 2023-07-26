@@ -18,7 +18,7 @@ internal func genericClassCreate(_ type: JSExport.Type, name: String) -> JSClass
         classDefinition.className = cName
         //classDefinition.attributes = JSClassAttributes(kJSClassAttributeNoAutomaticPrototype)
         classDefinition.attributes = JSClassAttributes(kJSClassAttributeNone)
-        classDefinition.callAsConstructor = class_constructor
+        //classDefinition.callAsConstructor = class_constructor
         //classDefinition.finalize = class_finalize
         //classDefinition.hasInstance = class_instanceof
         //classDefinition.getProperty = property_getter
@@ -69,9 +69,9 @@ internal func updatePrototype(object: JSObjectRef?, context: JSContextRef, prope
         }
     }
     
-    let prototypeName = JSStringRefWrapper(value: "prototype")
+    //let prototypeName = JSStringRefWrapper(value: "prototype")
     JSObjectSetPrototype(context, object, prototype)
-    JSObjectSetProperty(context, object, prototypeName.ref, prototype, JSPropertyAttributes(kJSPropertyAttributeNone), nil)
+    //JSObjectSetProperty(context, object, prototypeName.ref, prototype, JSPropertyAttributes(kJSPropertyAttributeNone), nil)
 }
 
 internal func class_instanceof(
@@ -95,20 +95,24 @@ internal func class_constructor(
 ) -> JSObjectRef? {
     guard let context = ctx else { return nil }
     
-    let info = JSObjectGetPrivate(object).assumingMemoryBound(to: JSExportInfo.self)
-    let classRef = info.pointee.jsClassRef
-    let newObject = JSObjectMake(ctx, classRef, nil)
+    let nativeArgs = (0..<argumentCount).map { valueRefToType(context: context, value: arguments![$0]!) }
+    print(nativeArgs)
+    
+    guard let classInfo = JSExportClass[object!] else { return nil }
+    
+    let newObject = JSObjectMake(ctx, classInfo.classRef, nil)
+    
+    let info: UnsafeMutablePointer<JSExportInfo> = .allocate(capacity: 1)
+    let instance = classInfo.nativeType.init()
+    info.initialize(to: JSExportInfo(type: classInfo.nativeType, jsClassRef: classInfo.classRef, instance: instance, callback: nil))
 
-    let instanceInfo: UnsafeMutablePointer<JSExportInfo> = .allocate(capacity: 1)
-    guard let instance = info.pointee.type?.init() else { return nil }
-    instanceInfo.initialize(to: JSExportInfo(type: info.pointee.type, jsClassRef: classRef, instance: instance, callback: nil))
-    JSObjectSetPrivate(newObject, instanceInfo)
+    JSObjectSetPrivate(newObject, info)
     instance.valueRef = newObject
     
     //print("updating prototype for instance of \(String(describing: info.pointee.type))")
-    //updatePrototype(object: newObject, context: context, properties: instance.exportProperties, methods: instance.exportMethods)
+    updatePrototype(object: newObject, context: context, properties: instance.exportProperties, methods: instance.exportMethods)
     
-    let nativeArgs = (0..<argumentCount).map { valueRefToType(context: context, value: arguments![$0]!) }
+    //let nativeArgs = (0..<argumentCount).map { valueRefToType(context: context, value: arguments![$0]!) }
     instance.construct(args: nativeArgs)
     
     return newObject

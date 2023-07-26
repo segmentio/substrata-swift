@@ -116,7 +116,7 @@ class CoreTests: XCTestCase {
         
             myInstanceMethod(arg) {
                 console.log("js: TestSuper.myInstanceMethod() called");
-                print("thing is busted")
+                super.myInstanceMethod(arg)
                 return 1337
             }
         };

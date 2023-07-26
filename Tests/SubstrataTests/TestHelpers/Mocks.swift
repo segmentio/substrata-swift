@@ -36,30 +36,38 @@ class EdgeFunctionJS: JSExport, JSStatic {
         }), as: "myBool")
         
         export(method: myInstanceMethod, as: "myInstanceMethod")
+        export(method: execute, as: "execute")
     }
     
-    override func construct(args: [JSConvertible?]) {
+    override func construct(args: [JSConvertible]) {
         print("constructor called")
-        let b: Bool = args[0]!.typed()!
+        let b: Bool = args.at
         print("constructor arg0 = \(b)")
     }
     
-    static func myStaticMethod(args: [JSConvertible?]) -> JSConvertible? {
+    static func myStaticMethod(args: [JSConvertible]) -> JSConvertible? {
         print("myStaticMethod Called")
         let b: Bool = args[0]!.typed()!
         print("myStaticMethod arg0 = \(b)")
         return true
     }
     
-    func myInstanceMethod(args: [JSConvertible?]) -> JSConvertible? {
+    func myInstanceMethod(args: [JSConvertible]) -> JSConvertible? {
         print("myInstanceMethod Called")
         let b: Bool = args[0]!.typed()!
         print("myInstanceMethod arg0 = \(b)")
         return true
     }
+    
+    func execute(args: [JSConvertible]) -> JSConvertible? {
+        print("execute Called")
+        let b: Bool = args[0]!.typed()!
+        print("execute arg0 = \(b)")
+        return true
+    }
 }
 
-func myFunction(args: [JSConvertible?]) -> JSConvertible? {
+func myFunction(args: [JSConvertible]) -> JSConvertible? {
     print("myFunction called")
     print("myFunction arg0 = \(String(humanized: args.index(0)?.string))")
     return true
