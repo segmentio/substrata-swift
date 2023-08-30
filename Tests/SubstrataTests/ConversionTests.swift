@@ -45,7 +45,7 @@ final class ConversionTests: XCTestCase {
         XCTAssertTrue(samples!["aDouble"]!.typed() == 3.14)
         XCTAssertTrue(samples!["aString"]!.typed() == "booya")
         XCTAssertTrue(samples!["aNull"]!.typed() == NSNull())
-        XCTAssertTrue((samples!["anArray"]! as! [JSConvertible]).count == 6)
+        XCTAssertTrue(samples!["anArray"]! as! [JSConvertible]).count == 6)
         XCTAssertTrue((samples!["aDictionary"]! as! [String: JSConvertible]).keys.count == 7)
         
         // test nested array stuff ...

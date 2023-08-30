@@ -12,18 +12,28 @@ import JavaScriptCore
 import CJavaScriptCore
 #endif
 
+internal struct JSClassInfo {
+    let classRef: JSClassRef
+    let nativeType: JSExport.Type
+}
+
+/**
+ This variable holds critical info for any instantiated objects.  There's no way to
+ connect an instance to a native type while preserving the prototype, as the prototype is
+ only maintained when using JSObjectMakeConstructor, which disables use of JSObjectSetPrivate until
+ an actual instance is made.  The entries in this list are removed in the `class_finalize` method.
+ 
+ This *IS* a global thing .. but lookup/cleanup will be isolated to a given JSEngine instance.
+ */
+internal var JSExportBookkeeping = [JSObjectRef: JSClassInfo]()
+
+
 internal func genericClassCreate(_ type: JSExport.Type, name: String) -> JSClassRef {
     var classDefinition = JSClassDefinition()
     let classRef: JSClassRef = name.withCString { cName in
         classDefinition.className = cName
-        //classDefinition.attributes = JSClassAttributes(kJSClassAttributeNoAutomaticPrototype)
         classDefinition.attributes = JSClassAttributes(kJSClassAttributeNone)
-        //classDefinition.callAsConstructor = class_constructor
-        //classDefinition.finalize = class_finalize
-        //classDefinition.hasInstance = class_instanceof
-        //classDefinition.getProperty = property_getter
-        //classDefinition.setProperty = property_setter
-        //classDefinition.hasProperty = property_checker
+        classDefinition.finalize = class_finalize
         return JSClassCreate(&classDefinition)
     }
     return classRef
@@ -46,7 +56,6 @@ internal func updatePrototype(object: JSObjectRef?, context: JSContextRef, prope
     
     if let methods {
         for (key, value) in methods {
-            print("Adding method \(key)")
             let name = JSStringRefWrapper(value: key)
             let functionRef = genericFunctionCreate(value)
             let info: UnsafeMutablePointer<JSExportInfo> = .allocate(capacity: 1)
@@ -59,7 +68,6 @@ internal func updatePrototype(object: JSObjectRef?, context: JSContextRef, prope
     
     if let properties {
         for (key, value) in properties {
-            print("Adding property \(key)")
             let name = JSStringRefWrapper(value: key)
             let v = value.getter()?.jsValue(context: context)
             let attrs = (value.setter == nil ?
@@ -69,21 +77,7 @@ internal func updatePrototype(object: JSObjectRef?, context: JSContextRef, prope
         }
     }
     
-    //let prototypeName = JSStringRefWrapper(value: "prototype")
     JSObjectSetPrototype(context, object, prototype)
-    //JSObjectSetProperty(context, object, prototypeName.ref, prototype, JSPropertyAttributes(kJSPropertyAttributeNone), nil)
-}
-
-internal func class_instanceof(
-    _ ctx: JSContextRef?,
-    _ constructor: JSObjectRef?,
-    _ possibleInstance: JSValueRef?,
-    _ exception: UnsafeMutablePointer<JSValueRef?>?
-) -> Bool {
-    guard let context = ctx else { return false }
-    let prototype_0 = JSObjectGetPrototype(context, constructor)
-    let prototype_1 = JSObjectGetPrototype(context, possibleInstance)
-    return JSValueIsStrictEqual(context, prototype_0, prototype_1)
 }
 
 internal func class_constructor(
@@ -94,154 +88,34 @@ internal func class_constructor(
     _ exception: UnsafeMutablePointer<JSValueRef?>?
 ) -> JSObjectRef? {
     guard let context = ctx else { return nil }
-    
-    let nativeArgs = (0..<argumentCount).map { valueRefToType(context: context, value: arguments![$0]!) }
-    print(nativeArgs)
-    
-    guard let classInfo = JSExportClass[object!] else { return nil }
+    guard let object else { return nil }
+    guard let classInfo = JSExportBookkeeping[object] else { return nil }
     
     let newObject = JSObjectMake(ctx, classInfo.classRef, nil)
     
     let info: UnsafeMutablePointer<JSExportInfo> = .allocate(capacity: 1)
     let instance = classInfo.nativeType.init()
+    instance.valueRef = newObject
     info.initialize(to: JSExportInfo(type: classInfo.nativeType, jsClassRef: classInfo.classRef, instance: instance, callback: nil))
 
     JSObjectSetPrivate(newObject, info)
-    instance.valueRef = newObject
     
-    //print("updating prototype for instance of \(String(describing: info.pointee.type))")
     updatePrototype(object: newObject, context: context, properties: instance.exportProperties, methods: instance.exportMethods)
     
-    //let nativeArgs = (0..<argumentCount).map { valueRefToType(context: context, value: arguments![$0]!) }
+    let nativeArgs: [JSConvertible] = (0..<argumentCount).map {
+        guard let result = valueRefToType(context: context, value: arguments![$0]) else { return NSNull() }
+        return result
+    }
     instance.construct(args: nativeArgs)
     
     return newObject
 }
 
 internal func class_finalize(_ object: JSObjectRef?) -> Void {
-    let info = JSObjectGetPrivate(object).assumingMemoryBound(to: JSExportInfo.self)
-    info.deinitialize(count: 1)
-    info.deallocate()
-}
-
-internal func property_getter(
-    _ ctx: JSContextRef?,
-    _ object: JSObjectRef?,
-    _ propertyName: JSStringRef?,
-    _ exception: UnsafeMutablePointer<JSValueRef?>?
-) -> JSValueRef? {
-    guard let context = ctx else { return nil }
-    guard let propertyName = propertyName else { return nil }
-    guard let propName = String.from(jsString: propertyName) else { return nil }
-    
-    var result: JSValueRef? = nil
-
-    let info = JSObjectGetPrivate(object).assumingMemoryBound(to: JSExportInfo.self)
-    
-    // check if it's an instance
-    var props = info.pointee.instance?.exportProperties
-    if props == nil {
-        // it's not, so fall back to the static props.
-        props = info.pointee.type?.exportProperties
-    }
-    
-    if let props = props {
-        if let property = props[propName] {
-            let value = property.getter()
-            result = jsTyped(value, context: context)
-        }
-    }
-    
-    if result == nil && propName == "prototype" {
-        return JSObjectGetPrototype(context, object)
-    }
-    
-    /*if result == nil && propName == "hasOwnProperty" {
-        return JSObjectGetPrototype(context, object)
-    }*/
-    
-
-    return result
-}
-
-internal func property_setter(
-    _ ctx: JSContextRef?,
-    _ object: JSObjectRef?,
-    _ propertyName: JSStringRef?,
-    _ value: JSValueRef?,
-    _ exception: UnsafeMutablePointer<JSValueRef?>?
-) -> Bool {
-    guard let context = ctx else { return false }
-    guard let propertyName = propertyName else { return false }
-    
-    var result: Bool = false
-
-    let info = JSObjectGetPrivate(object).assumingMemoryBound(to: JSExportInfo.self)
-    
-    // check if it's an instance
-    var props = info.pointee.instance?.exportProperties
-    if props == nil {
-        // it's not, so fall back to the static props.
-        props = info.pointee.type?.exportProperties
-    }
-    
-    guard let propName = String.from(jsString: propertyName) else { return false }
-    if let props = props, let property = props[propName], let setter = property.setter {
-        let value = valueRefToType(context: context, value: value)
-        setter(value)
-        result = true
-    }
-    return result
-}
-
-internal func property_checker(
-    _ ctx: JSContextRef?,
-    _ object: JSObjectRef?,
-    _ propertyName: JSStringRef?
-) -> Bool {
-    guard let propertyName = propertyName else { return false }
-    guard let propName = String.from(jsString: propertyName) else { return false }
-    
-    var result: Bool = false
-    
-    print("Checking for property \(propName)...")
-    
-    switch propName {
-    case "prototype": return true
-    case "hasOwnProperty": return false
-    default:
-        break
-    }
-
-    let info = JSObjectGetPrivate(object).assumingMemoryBound(to: JSExportInfo.self)
-    
-    // check if it's an instance
-    var props = info.pointee.instance?.exportProperties
-    if props == nil {
-        // it's not, so fall back to the static props.
-        props = info.pointee.type?.exportProperties
-    }
-    
-    // check if it's an instance
-    var methods = info.pointee.instance?.exportMethods
-    if methods == nil {
-        // it's not, so fall back to the static props.
-        methods = info.pointee.type?.exportMethods
-    }
-    
-    if let props, props[propName] != nil {
-        result = true
-    }
-    /*if let methods, methods[propName] != nil {
-        result = true
-    }*/
-    print("Checking for property \(propName), found? = \(result)")
-    return result
-}
-
-
-internal func function_finalize(_ object: JSObjectRef?) -> Void {
-    let info = JSObjectGetPrivate(object).assumingMemoryBound(to: JSExportInfo.self)
+    guard let object else { return }
+    JSExportBookkeeping.removeValue(forKey: object)
+    guard let priv = JSObjectGetPrivate(object) else { return }
+    let info = priv.assumingMemoryBound(to: JSExportInfo.self)
     info.deinitialize(count: 1)
     info.deallocate()
 }
@@ -255,8 +129,21 @@ internal func function_callback(
     _ exception: UnsafeMutablePointer<JSValueRef?>?
 ) -> JSValueRef? {
     guard let context = ctx else { return nil }
-    let info = JSObjectGetPrivate(object).assumingMemoryBound(to: JSExportInfo.self)
-    let nativeArgs = (0..<argumentCount).map { valueRefToType(context: context, value: arguments![$0]!) }
+    guard let priv = JSObjectGetPrivate(object) else { return nil }
+    let info = priv.assumingMemoryBound(to: JSExportInfo.self)
+    let nativeArgs: [JSConvertible] = (0..<argumentCount).map {
+        guard let result = valueRefToType(context: context, value: arguments![$0]) else { return NSNull() }
+        return result
+    }
     let result = info.pointee.callback?(nativeArgs)
     return jsTyped(result, context: context)
 }
+
+internal func function_finalize(_ object: JSObjectRef?) -> Void {
+    guard let object else { return }
+    guard let priv = JSObjectGetPrivate(object) else { return }
+    let info = priv.assumingMemoryBound(to: JSExportInfo.self)
+    info.deinitialize(count: 1)
+    info.deallocate()
+}
+

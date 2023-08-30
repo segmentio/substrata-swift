@@ -12,13 +12,6 @@ import JavaScriptCore
 import CJavaScriptCore
 #endif
 
-struct JSClassInfo {
-    let classRef: JSClassRef
-    let nativeType: JSExport.Type
-}
-
-var JSExportClass = [JSObjectRef: JSClassInfo]()
-
 public class JSEngine {
     private let contextGroup: JSContextGroupRef
     private let globalContext: JSGlobalContextRef
@@ -114,21 +107,15 @@ public class JSEngine {
             
             let info: UnsafeMutablePointer<JSExportInfo> = .allocate(capacity: 1)
             info.initialize(to: JSExportInfo(type: type, jsClassRef: classRef, instance: nil, callback: nil))
-            //let classObject = JSObjectMake(context, classRef, info)!
             let classObject = JSObjectMakeConstructor(context, classRef, class_constructor)!
-            /*let canSetPrivate = JSObjectSetPrivate(classObject, info)
-            if canSetPrivate == false {
-                print("JSObjectSetPrivate failed on \(className)")
-            }*/
-            
-            JSExportClass[classObject] = JSClassInfo(classRef: classRef, nativeType: type)
+            JSExportBookkeeping[classObject] = JSClassInfo(classRef: classRef, nativeType: type)
             
             if let t = type as? JSStatic.Type {
                 t.staticInit()
             }
             
-            //print("updating prototype for class \(String(describing: info.pointee.type))")
             updatePrototype(object: classObject, context: context, properties: type.exportProperties, methods: type.exportMethods)
+            
             let name = JSStringRefWrapper(value: className)
             JSObjectSetProperty(context, globalObject, name.ref, classObject, JSPropertyAttributes(kJSPropertyAttributeNone), &exception)
         }

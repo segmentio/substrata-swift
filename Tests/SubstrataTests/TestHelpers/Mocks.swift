@@ -41,27 +41,27 @@ class EdgeFunctionJS: JSExport, JSStatic {
     
     override func construct(args: [JSConvertible]) {
         print("constructor called")
-        let b: Bool = args.at
+        let b: Bool = args.typed(as: Bool.self, index: 0)!
         print("constructor arg0 = \(b)")
     }
     
     static func myStaticMethod(args: [JSConvertible]) -> JSConvertible? {
         print("myStaticMethod Called")
-        let b: Bool = args[0]!.typed()!
+        let b: Bool = args.typed(as: Bool.self, index: 0)!
         print("myStaticMethod arg0 = \(b)")
         return true
     }
     
     func myInstanceMethod(args: [JSConvertible]) -> JSConvertible? {
         print("myInstanceMethod Called")
-        let b: Bool = args[0]!.typed()!
+        let b: Bool = args.typed(as: Bool.self, index: 0)!
         print("myInstanceMethod arg0 = \(b)")
         return true
     }
     
     func execute(args: [JSConvertible]) -> JSConvertible? {
         print("execute Called")
-        let b: Bool = args[0]!.typed()!
+        let b: Bool = args.typed(as: Bool.self, index: 0)!
         print("execute arg0 = \(b)")
         return true
     }
@@ -132,8 +132,8 @@ class AnalyticsJS: JSExport, JSStatic {
         }, as: "testObject")
     }
     
-    override func construct(args: [JSConvertible?]) {
-        writeKey = args.typed(String.self, index: 0)
+    override func construct(args: [JSConvertible]) {
+        writeKey = args.typed(as: String.self, index: 0)
     }
     
     var writeKey: String? = nil

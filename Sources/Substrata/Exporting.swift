@@ -16,35 +16,32 @@ public protocol JSStatic {
     static func staticInit()
 }
 
-public class JSExport {
-    //static let 
+open class JSExport {
     internal var exportProperties = [String: JSProperty]()
     internal var exportMethods = [String: JSFunctionDefinition]()
     internal var valueRef: JSValueRef? = nil
     public required init() { }
-    public func construct(args: [JSConvertible?]) { }
+    open func construct(args: [JSConvertible]) { }
 }
 
 extension JSExport {
-    static func export(method: @escaping JSFunctionDefinition, as name: String) {
-        //exportMethods[name] = method
+    public static func export(method: @escaping JSFunctionDefinition, as name: String) {
         let className = String(describing: Self.self)
         let classInfo = JSStaticStorage.lookup(className: className)
         classInfo.exportMethods[name] = method
     }
     
-    static func export(property: JSProperty, as name: String) {
-        //exportProperties[name] = property
+    public static func export(property: JSProperty, as name: String) {
         let className = String(describing: Self.self)
         let classInfo = JSStaticStorage.lookup(className: className)
         classInfo.exportProperties[name] = property
     }
 
-    func export(method: @escaping JSFunctionDefinition, as name: String) {
+    public func export(method: @escaping JSFunctionDefinition, as name: String) {
         exportMethods[name] = method
     }
     
-    func export(property: JSProperty, as name: String) {
+    public func export(property: JSProperty, as name: String) {
         exportProperties[name] = property
     }
 }
