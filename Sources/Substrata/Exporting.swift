@@ -31,27 +31,17 @@ extension JSExport {
         classInfo.exportMethods[name] = method
     }
     
-    public static func export(property: JSProperty, as name: String) {
-        let className = String(describing: Self.self)
-        let classInfo = JSStaticStorage.lookup(className: className)
-        classInfo.exportProperties[name] = property
-    }
-
     public func export(method: @escaping JSFunctionDefinition, as name: String) {
         exportMethods[name] = method
     }
     
     public func export(property: JSProperty, as name: String) {
+        print("Exporting property `\(name)`.")
         exportProperties[name] = property
     }
 }
 
 extension JSExport {
-    internal static var exportProperties: [String: JSProperty] {
-        let name = String(describing: Self.self)
-        return JSStaticStorage.lookup(className: name).exportProperties
-    }
-    
     internal static var exportMethods: [String: JSFunctionDefinition] {
         let name = String(describing: Self.self)
         return JSStaticStorage.lookup(className: name).exportMethods

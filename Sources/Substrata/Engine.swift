@@ -102,6 +102,11 @@ public class JSEngine {
         guard exposedClasses[className] == nil else { return }
         jsQueue.sync {
             let context = globalContext
+            
+            if let t = type as? JSStatic.Type {
+                t.staticInit()
+            }
+            
             let classRef = genericClassCreate(type, name: className)
             exposedClasses[className] = classRef
             
@@ -110,11 +115,7 @@ public class JSEngine {
             let classObject = JSObjectMakeConstructor(context, classRef, class_constructor)!
             JSExportBookkeeping[classObject] = JSClassInfo(classRef: classRef, nativeType: type)
             
-            if let t = type as? JSStatic.Type {
-                t.staticInit()
-            }
-            
-            updatePrototype(object: classObject, context: context, properties: type.exportProperties, methods: type.exportMethods)
+            addMethods(object: classObject, context: context, methods: type.exportMethods)
             
             let name = JSStringRefWrapper(value: className)
             JSObjectSetProperty(context, globalObject, name.ref, classObject, JSPropertyAttributes(kJSPropertyAttributeNone), &exception)

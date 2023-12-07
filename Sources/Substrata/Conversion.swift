@@ -52,6 +52,10 @@ internal func valueRefToType(context: JSContextRef, value: JSValueRef?) -> JSCon
         return JSFunction(function: value)
     }
     
+    if value.isClass(context: context) {
+        print("it's a class")
+    }
+    
     let isNativeObject = hasPrivateData(value: value)
     if JSValueIsObject(context, value) {
         if isNativeObject {
@@ -197,6 +201,13 @@ extension Array: JSConvertible where Element == JSConvertible {
         let result = stringArray.joined(separator: ", ")
         return "[\(result)]"
     }
+    
+    public func atIndex(_ index: Int) -> JSConvertible? {
+        if index < count {
+            return self[index]
+        }
+        return nil
+    }
 }
 
 extension Dictionary: JSConvertible where Key == String, Value == JSConvertible {
@@ -292,12 +303,20 @@ public struct JSError: JSConvertible, CustomStringConvertible, CustomDebugString
     }
 }
 
+public class JSClass {
+    
+}
+
 public class JSFunction: JSConvertible, CustomStringConvertible, CustomDebugStringConvertible {
     public static func from(jsValue: JSValueRef, context: JSContextRef) -> Self? {
-        nil
+        let result = Self.init(function: jsValue)
+        result.context = context
+        return result
     }
     
     public func jsValue(context: JSContextRef) -> JSValueRef? {
+        // we usually don't need context, but set it if we get it.
+        self.context = context
         return function
     }
     
@@ -306,8 +325,9 @@ public class JSFunction: JSConvertible, CustomStringConvertible, CustomDebugStri
     }
     
     internal var function: JSValueRef?
+    internal var context: JSValueRef? = nil
     
-    public init(function: JSValueRef?) {
+    public required init(function: JSValueRef?) {
         self.function = function
     }
     

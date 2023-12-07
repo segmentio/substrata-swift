@@ -150,11 +150,12 @@ class CoreTests: XCTestCase {
         }
         """)*/
 
-        /*engine.evaluate(script: "printPrototype(console);")
+        engine.evaluate(script: "console.log('hello');")
+        engine.evaluate(script: "printPrototype(console);")
         engine.evaluate(script: "printPrototype(EdgeFunction);")
         engine.evaluate(script: "console.log(EdgeFunction.myStaticBool);")
         
-        engine.evaluate(script: "let a = new EdgeFunction(true);")
+        /*engine.evaluate(script: "let a = new EdgeFunction(true);")
         engine.evaluate(script: "a.myInstanceMethod(true);")
         engine.evaluate(script: "printPrototype(a);")*/
         
@@ -190,7 +191,18 @@ class CoreTests: XCTestCase {
 
         engine.export(type: EdgeFunctionJS.self, className: "EdgeFunction")
         
-        engine.evaluate(script: "EdgeFunction.myStaticBool = true")
+        /*let a0 = engine.evaluate(script: "let e = new EdgeFunction(true)")
+        print(a0)
+        let a1 = engine.evaluate(script: "e.myBool")
+        print(a1)*/
+        let a = engine.evaluate(script: "EdgeFunction.testValue")
+        print(a)
+        let b = engine.evaluate(script: "EdgeFunction.myStaticBool = false")
+        print(b)
+        let c = engine.evaluate(script: "EdgeFunction.myStaticBool = true")
+        print(b)
+        let v = engine.evaluate(script: "EdgeFunction.myStaticBool")
+        print(v)
         XCTAssertTrue(EdgeFunctionJS.myStaticBool!)
 
         engine.evaluate(script: "let a = new EdgeFunction(true)")

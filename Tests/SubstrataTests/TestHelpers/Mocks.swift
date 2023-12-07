@@ -9,18 +9,14 @@ import Foundation
 @testable import Substrata
 
 class EdgeFunctionJS: JSExport, JSStatic {
-    static var myStaticBool: Bool? = false
+    static var myStaticBool: Bool? = true
     var myBool: Bool? = false
     
-    static func reset() { myStaticBool = false }
+    static func reset() { myStaticBool = true }
     
     static func staticInit() {
-        export(property: JSProperty(getter: {
-            return myStaticBool
-        }, setter: { value in
-            myStaticBool = value?.typed()
-        }), as: "myStaticBool")
-        
+        export(method: getMyStaticBool, as: "getMyStaticBool")
+        export(method: setMyStaticBool, as: "setMyStaticBool")
         export(method: myStaticMethod, as: "myStaticMethod")
     }
     
@@ -52,6 +48,18 @@ class EdgeFunctionJS: JSExport, JSStatic {
         return true
     }
     
+    static func getMyStaticBool(args: [JSConvertible]) -> JSConvertible? {
+        print("getMyStaticBool Called")
+        return myStaticBool
+    }
+    
+    static func setMyStaticBool(args: [JSConvertible]) -> JSConvertible? {
+        print("getMyStaticBool Called")
+        let b: Bool = args.typed(as: Bool.self, index: 0)!
+        myStaticBool = b
+        return nil
+    }
+    
     func myInstanceMethod(args: [JSConvertible]) -> JSConvertible? {
         print("myInstanceMethod Called")
         let b: Bool = args.typed(as: Bool.self, index: 0)!
@@ -61,8 +69,8 @@ class EdgeFunctionJS: JSExport, JSStatic {
     
     func execute(args: [JSConvertible]) -> JSConvertible? {
         print("execute Called")
-        let b: Bool = args.typed(as: Bool.self, index: 0)!
-        print("execute arg0 = \(b)")
+        let s: String = args.atIndex(0)!.typed()!
+        print("execute arg0 = \(s)")
         return true
     }
 }
@@ -75,11 +83,11 @@ func myFunction(args: [JSConvertible]) -> JSConvertible? {
 
 class AnalyticsJS: JSExport, JSStatic {
     static func staticInit() {
-        export(property: JSProperty(getter: {
+        /*export(property: JSProperty(getter: {
             return myStaticProperty
         }, setter: { value in
             myStaticProperty = value?.typed()
-        }), as: "myStaticProperty")
+        }), as: "myStaticProperty")*/
         
         export(method: { args in
             print("hello")

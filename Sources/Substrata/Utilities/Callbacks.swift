@@ -12,6 +12,7 @@ import JavaScriptCore
 import CJavaScriptCore
 #endif
 
+
 internal struct JSClassInfo {
     let classRef: JSClassRef
     let nativeType: JSExport.Type
@@ -27,14 +28,37 @@ internal struct JSClassInfo {
  */
 internal var JSExportBookkeeping = [JSObjectRef: JSClassInfo]()
 
+// MARK: - Classes
+let staticValues = [
+    JSStaticValue(name: strdup("testValue"), getProperty: property_getter, setProperty: property_setter, attributes: 0)
+]
+
+var staticValuesPtr = UnsafeMutablePointer<JSStaticValue>.allocate(capacity: staticValues.count)
 
 internal func genericClassCreate(_ type: JSExport.Type, name: String) -> JSClassRef {
-    var classDefinition = JSClassDefinition()
+    staticValuesPtr.initialize(from: staticValues, count: staticValues.count)
+    
     let classRef: JSClassRef = name.withCString { cName in
-        classDefinition.className = cName
-        classDefinition.attributes = JSClassAttributes(kJSClassAttributeNone)
-        classDefinition.finalize = class_finalize
-        return JSClassCreate(&classDefinition)
+        var classDef = JSClassDefinition(
+            version: 1,
+            attributes: JSClassAttributes(kJSClassAttributeNone),
+            className: cName,
+            parentClass: nil,
+            staticValues: staticValuesPtr,
+            staticFunctions: nil,
+            initialize: nil,
+            finalize: class_finalize,
+            hasProperty: nil,
+            getProperty: property_getter,
+            setProperty: property_setter,
+            deleteProperty: nil,
+            getPropertyNames: nil,
+            callAsFunction: nil,
+            callAsConstructor: class_constructor,
+            hasInstance: class_instanceof,
+            convertToType: nil
+        )
+        return JSClassCreate(&classDef)
     }
     return classRef
 }
@@ -46,14 +70,10 @@ internal func genericFunctionCreate(_ function: JSFunctionDefinition) -> JSClass
     return JSClassCreate(&classDefinition)
 }
 
-internal func updatePrototype(object: JSObjectRef?, context: JSContextRef, properties: [String: JSProperty]?, methods: [String: JSFunctionDefinition]?)
+internal func addMethods(object: JSObjectRef?, context: JSContextRef, methods: [String: JSFunctionDefinition]?)
 {
     guard let object else { return }
-    var prototype = JSObjectGetPrototype(context, object)
-    if prototype == nil {
-        prototype = JSObjectMake(context, nil, nil)
-    }
-    
+   
     if let methods {
         for (key, value) in methods {
             let name = JSStringRefWrapper(value: key)
@@ -62,22 +82,9 @@ internal func updatePrototype(object: JSObjectRef?, context: JSContextRef, prope
             info.initialize(to: JSExportInfo(type: nil, jsClassRef: functionRef, instance: nil, callback: value))
             let functionObject = JSObjectMake(context, functionRef, nil)
             JSObjectSetPrivate(functionObject, info)
-            JSObjectSetProperty(context, prototype, name.ref, functionObject, JSPropertyAttributes(kJSPropertyAttributeNone), nil)
+            JSObjectSetProperty(context, object, name.ref, functionObject, JSPropertyAttributes(kJSPropertyAttributeNone), nil)
         }
     }
-    
-    if let properties {
-        for (key, value) in properties {
-            let name = JSStringRefWrapper(value: key)
-            let v = value.getter()?.jsValue(context: context)
-            let attrs = (value.setter == nil ?
-                         JSPropertyAttributes(kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete) :
-                            JSPropertyAttributes(kJSPropertyAttributeDontDelete))
-            JSObjectSetProperty(context, prototype, name.ref, v, attrs, nil)
-        }
-    }
-    
-    JSObjectSetPrototype(context, object, prototype)
 }
 
 internal func class_constructor(
@@ -100,7 +107,7 @@ internal func class_constructor(
 
     JSObjectSetPrivate(newObject, info)
     
-    updatePrototype(object: newObject, context: context, properties: instance.exportProperties, methods: instance.exportMethods)
+    addMethods(object: newObject, context: context, methods: instance.exportMethods)
     
     let nativeArgs: [JSConvertible] = (0..<argumentCount).map {
         guard let result = valueRefToType(context: context, value: arguments![$0]) else { return NSNull() }
@@ -119,6 +126,75 @@ internal func class_finalize(_ object: JSObjectRef?) -> Void {
     info.deinitialize(count: 1)
     info.deallocate()
 }
+
+internal func class_instanceof(
+    _ ctx: JSContextRef?,
+    _ constructor: JSObjectRef?,
+    _ possibleInstance: JSValueRef?,
+    _ exception: UnsafeMutablePointer<JSValueRef?>?
+) -> Bool {
+    guard let context = ctx else { return false }
+    let prototype_0 = JSObjectGetPrototype(context, constructor)
+    let prototype_1 = JSObjectGetPrototype(context, possibleInstance)
+    return JSValueIsStrictEqual(context, prototype_0, prototype_1)
+}
+
+
+// MARK: - Properties
+
+internal func property_getter(
+    _ ctx: JSContextRef?,
+    _ object: JSObjectRef?,
+    _ propertyNameRef: JSStringRef?,
+    _ exception: UnsafeMutablePointer<JSValueRef?>?
+) -> JSValueRef? {
+    var result: JSValueRef? = nil
+    
+    guard let propertyNameRef = propertyNameRef else { return result }
+    guard let propertyName = String.from(jsString: propertyNameRef) else { return result }
+    guard let context = ctx else { return result }
+    guard let priv = JSObjectGetPrivate(object) else { return result }
+    
+    let info = priv.assumingMemoryBound(to: JSExportInfo.self)
+    
+    if let instance = info.pointee.instance {
+        if let property = instance.exportProperties[propertyName] {
+            let v = property.getter()?.jsValue(context: context)
+            result = v
+        }
+    }
+    
+    return result
+}
+
+internal func property_setter(
+    _ ctx: JSContextRef?,
+    _ object: JSObjectRef?,
+    _ propertyNameRef: JSStringRef?,
+    _ value: JSValueRef?,
+    _ exception: UnsafeMutablePointer<JSValueRef?>?
+) -> Bool {
+    var result = false
+    
+    guard let propertyNameRef = propertyNameRef else { return result }
+    guard let propertyName = String.from(jsString: propertyNameRef) else { return result }
+    guard let context = ctx else { return result }
+    guard let priv = JSObjectGetPrivate(object) else { return result }
+    
+    let info = priv.assumingMemoryBound(to: JSExportInfo.self)
+    
+    if let instance = info.pointee.instance {
+        if let property = instance.exportProperties[propertyName], let setter = property.setter {
+            let v = valueRefToType(context: context, value: value)
+            setter(v)
+            result = true
+        }
+    }
+    
+    return result
+}
+
+// MARK: - Functions
 
 internal func function_callback(
     _ ctx: JSContextRef?,

@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import JavaScriptCore
 
 extension Double {
     internal var isInteger: Bool {
@@ -78,4 +79,15 @@ extension Decimal {
         return _isNegative != 0 ? -d : d
     }
 
+}
+
+extension JSValueRef {
+    func isClass(context: JSContextRef) -> Bool {
+        let method = "constructor".jsValue(context: context)
+        if let constructor = JSObjectGetProperty(context, self, method, nil),
+           let s = String.from(jsValue: constructor, context: context) {
+            return s.hasPrefix("class")
+        }
+        return false
+    }
 }
