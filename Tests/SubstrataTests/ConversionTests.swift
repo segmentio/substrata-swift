@@ -35,7 +35,7 @@ final class ConversionTests: XCTestCase {
         let r = engine.value(for: "conversionSamples")
         XCTAssertNotNil(r)
         
-        let samples = r as? [String: JSConvertible]
+        let samples = r as? JSObject
         XCTAssertNotNil(samples)
         
         // test basic stuff ....
@@ -46,12 +46,12 @@ final class ConversionTests: XCTestCase {
         XCTAssertTrue(samples!["aString"]!.typed() == "booya")
         XCTAssertTrue(samples!["aNull"]!.typed() == NSNull())
         XCTAssertTrue((samples!["anArray"]! as! [JSConvertible]).count == 6)
-        XCTAssertTrue((samples!["aDictionary"]! as! [String: JSConvertible]).keys.count == 7)
+        XCTAssertTrue((samples!["aDictionary"]! as! JSObject).keys.count == 7)
         
         // test nested array stuff ...
         let array = samples!["anArray"]! as! [JSConvertible]
         let subArray = array[4] as! [JSConvertible]
-        let subDict = array[5] as! [String: JSConvertible]
+        let subDict = array[5] as! JSObject
         XCTAssertNotNil(array)
         XCTAssertNotNil(subArray)
         XCTAssertNotNil(subDict)
@@ -61,9 +61,9 @@ final class ConversionTests: XCTestCase {
         XCTAssertTrue(subDict["anotherBool"] as! Bool == false)
         
         // test nested dictionary stuff ...
-        let dict = samples!["aDictionary"]! as! [String: JSConvertible]
+        let dict = samples!["aDictionary"]! as! JSObject
         let nestedArray = dict["anArray"] as! [JSConvertible]
-        let nestedDict = dict["aDictionary"] as! [String: JSConvertible]
+        let nestedDict = dict["aDictionary"] as! JSObject
         XCTAssertNotNil(dict)
         XCTAssertNotNil(nestedArray)
         XCTAssertNotNil(nestedDict)

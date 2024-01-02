@@ -21,9 +21,14 @@ internal func jsTyped(_ value: JSConvertible?, context: JSContextRef) -> JSValue
     return JSValueMakeUndefined(context)
 }
 
-@inlinable
-internal func hasPrivateData(value: JSValueRef?) -> Bool {
-    let ptr = JSObjectGetPrivate(value)
-    if ptr != nil { return true }
+internal func isNativeAndNotASubclass(value: JSValueRef?, context: JSContextRef) -> Bool {
+    guard JSObjectGetPrivate(value) != nil else { return false }
+    let script = JSStringRefWrapper(value: """
+        this.constructor.name === Object.getPrototypeOf(Object.getPrototypeOf(this)).constructor.name
+    """)
+    if let valueRef = JSEvaluateScript(context, script.ref, value, nil, 0, nil) {
+        guard let b = Bool.from(jsValue: valueRef, context: context) else { return false }
+        return b
+    }
     return false
 }

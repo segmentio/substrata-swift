@@ -13,10 +13,10 @@ import CJavaScriptCore
 #endif
 
 public class JSEngine {
-    private let contextGroup: JSContextGroupRef
-    private let globalContext: JSGlobalContextRef
-    private let globalObject: JSContextRef
-    private var exception: JSValueRef? {
+    internal let contextGroup: JSContextGroupRef
+    internal let globalContext: JSGlobalContextRef
+    internal let globalObject: JSContextRef
+    internal var exception: JSValueRef? {
         didSet {
             guard let e = exception else { return }
             if let callback = exceptionHandler {
@@ -28,10 +28,10 @@ public class JSEngine {
         }
     }
     
-    private var exposedClasses = [String: JSClassRef]()
-    private var exposedFunctions = [String: JSClassRef]()
+    internal var exposedClasses = [String: JSClassRef]()
+    internal var exposedFunctions = [String: JSClassRef]()
     
-    private let jsQueue = DispatchQueue(label: "com.segment.serial.javascript")
+    internal let jsQueue = DispatchQueue(label: "com.segment.serial.javascript")
 
     public typealias BundleLoaded = (Bool) -> Void
     public var exceptionHandler: ((JSError) -> Void)?
@@ -94,6 +94,7 @@ public class JSEngine {
             let script = JSStringRefWrapper(value: script)
             let value = JSEvaluateScript(globalContext, script.ref, nil, nil, 0, &exception)
             result = valueRefToType(context: globalContext, value: value)
+            makeCallableIfNecessary(&result)
         }
         return result
     }
@@ -166,10 +167,10 @@ public class JSEngine {
         guard exposedFunctions[named] == nil else { return nil }
         var result: JSFunction? = nil
         jsQueue.sync {
-            let context = globalContext
+            let context = self.globalContext
             let classRef = genericFunctionCreate(function)
             exposedFunctions[named] = classRef
-            let classObject = JSObjectMake(context, classRef, nil)
+            guard let classObject = JSObjectMake(context, classRef, nil) else { return }
             
             let info: UnsafeMutablePointer<JSExportInfo> = .allocate(capacity: 1)
             info.initialize(to: JSExportInfo(type: nil, jsClassRef: classRef, instance: nil, callback: function))
@@ -179,7 +180,7 @@ public class JSEngine {
             let name = JSStringRefWrapper(value: named)
             JSObjectSetProperty(context, globalObject, name.ref, classObject, JSPropertyAttributes(kJSPropertyAttributeNone), &exception)
             
-            result = JSFunction(function: classObject)
+            result = JSFunction(function: classObject, context: context)
         }
         return result
     }
@@ -190,6 +191,7 @@ public class JSEngine {
         let value = rawEvaluate(script: keyPath)
         jsQueue.sync {
             result = valueRefToType(context: globalContext, value: value)
+            makeCallableIfNecessary(&result)
         }
         return result
     }
@@ -222,6 +224,7 @@ public class JSEngine {
                 let args = args.map { jsTyped($0, context: self.globalContext) }
                 let v = JSObjectCallAsFunction(globalContext, value, nil, args.count, args.isEmpty ? nil : args, &exception)
                 result = valueRefToType(context: globalContext, value: v)
+                makeCallableIfNecessary(&result)
             }
         }
         return result
@@ -230,11 +233,12 @@ public class JSEngine {
     @discardableResult
     public func call(function: JSFunction?, args: [JSConvertible?]) -> JSConvertible? {
         var result: JSConvertible? = nil
-        if let value = function?.function {
+        if let value = function?.valueRef {
             jsQueue.sync {
                 let args = args.map { jsTyped($0, context: self.globalContext) }
                 let v = JSObjectCallAsFunction(globalContext, value, nil, args.count, args.isEmpty ? nil : args, &exception)
                 result = valueRefToType(context: globalContext, value: v)
+                makeCallableIfNecessary(&result)
             }
         }
         return result
@@ -245,14 +249,27 @@ public class JSEngine {
 
 extension JSEngine {
     @discardableResult
-    internal func rawEvaluate(script: String) -> JSValueRef? {
+    internal func rawEvaluate(script: String, this: JSValueRef? = nil) -> JSValueRef? {
         var result: JSValueRef? = nil
         jsQueue.sync {
             let script = JSStringRefWrapper(value: script)
-            result = JSEvaluateScript(globalContext, script.ref, nil, nil, 0, &exception)
+            result = JSEvaluateScript(globalContext, script.ref, this, nil, 0, &exception)
         }
         return result
     }
+    
+    @discardableResult
+    internal func evaluate(script: String, this: JSValueRef) -> JSConvertible? {
+        var result: JSConvertible? = nil
+        jsQueue.sync {
+            let script = JSStringRefWrapper(value: script)
+            let value = JSEvaluateScript(globalContext, script.ref, this, nil, 0, &exception)
+            result = valueRefToType(context: globalContext, value: value)
+            makeCallableIfNecessary(&result)
+        }
+        return result
+    }
+
     
     internal func setupProvidedObjects() {
         export(type: Console.self, className: "console")

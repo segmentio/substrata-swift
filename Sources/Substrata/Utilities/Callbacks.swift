@@ -29,22 +29,15 @@ internal struct JSClassInfo {
 internal var JSExportBookkeeping = [JSObjectRef: JSClassInfo]()
 
 // MARK: - Classes
-let staticValues = [
-    JSStaticValue(name: strdup("testValue"), getProperty: property_getter, setProperty: property_setter, attributes: 0)
-]
-
-var staticValuesPtr = UnsafeMutablePointer<JSStaticValue>.allocate(capacity: staticValues.count)
 
 internal func genericClassCreate(_ type: JSExport.Type, name: String) -> JSClassRef {
-    staticValuesPtr.initialize(from: staticValues, count: staticValues.count)
-    
     let classRef: JSClassRef = name.withCString { cName in
         var classDef = JSClassDefinition(
             version: 1,
             attributes: JSClassAttributes(kJSClassAttributeNone),
             className: cName,
             parentClass: nil,
-            staticValues: staticValuesPtr,
+            staticValues: nil,
             staticFunctions: nil,
             initialize: nil,
             finalize: class_finalize,

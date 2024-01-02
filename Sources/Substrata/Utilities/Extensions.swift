@@ -78,7 +78,6 @@ extension Decimal {
         }
         return _isNegative != 0 ? -d : d
     }
-
 }
 
 extension JSValueRef {
@@ -89,5 +88,30 @@ extension JSValueRef {
             return s.hasPrefix("class")
         }
         return false
+    }
+}
+
+extension JSEngine {
+    @discardableResult
+    internal func call(functionName: String, this: JSValueRef, args: [JSConvertible?]) -> JSConvertible? {
+        var result: JSConvertible? = nil
+        jsQueue.sync {
+            let name = JSStringRefWrapper(value: functionName)
+            let value = JSObjectGetProperty(globalContext, this, name.ref, &exception)
+            let args = args.map { jsTyped($0, context: self.globalContext) }
+            let v = JSObjectCallAsFunction(globalContext, value, this, args.count, args.isEmpty ? nil : args, &exception)
+            result = valueRefToType(context: globalContext, value: v)
+            makeCallableIfNecessary(&result)
+        }
+        return result
+    }
+    
+    @discardableResult
+    internal func run(closure: () -> JSConvertible?) -> JSConvertible? {
+        var result: JSConvertible?
+        jsQueue.sync {
+            result = closure()
+        }
+        return result
     }
 }

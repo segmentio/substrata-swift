@@ -42,7 +42,7 @@ final class BridgeTests: XCTestCase {
         
         let myEdgeFn = engine.bridge?["myEdgeFn"]
         let myArray = engine.bridge?["myArray"] as! [JSConvertible]
-        let myDict = engine.bridge?["myDict"] as! [String: JSConvertible]
+        let myDict = engine.bridge?["myDict"] as! JSObject
         
         XCTAssertTrue(myEdgeFn is EdgeFunctionJS)
         XCTAssertTrue(myArray.count == 3)

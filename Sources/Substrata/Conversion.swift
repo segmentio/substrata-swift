@@ -49,19 +49,15 @@ internal func valueRefToType(context: JSContextRef, value: JSValueRef?) -> JSCon
     }
     
     if JSObjectIsFunction(context, value) {
-        return JSFunction(function: value)
+        return JSFunction(function: value, context: context)
     }
     
-    if value.isClass(context: context) {
-        print("it's a class")
-    }
-    
-    let isNativeObject = hasPrivateData(value: value)
     if JSValueIsObject(context, value) {
-        if isNativeObject {
+        if isNativeAndNotASubclass(value: value, context: context) {
             return JSExport.from(jsValue: value, context: context)
+        } else {
+            return JSObject(object: value, context: context)
         }
-        return Dictionary<String, JSConvertible>.from(jsValue: value, context: context)
     }
     
     return nil
@@ -303,43 +299,6 @@ public struct JSError: JSConvertible, CustomStringConvertible, CustomDebugString
     }
 }
 
-public class JSClass {
-    
-}
-
-public class JSFunction: JSConvertible, CustomStringConvertible, CustomDebugStringConvertible {
-    public static func from(jsValue: JSValueRef, context: JSContextRef) -> Self? {
-        let result = Self.init(function: jsValue)
-        result.context = context
-        return result
-    }
-    
-    public func jsValue(context: JSContextRef) -> JSValueRef? {
-        // we usually don't need context, but set it if we get it.
-        self.context = context
-        return function
-    }
-    
-    public var string: String {
-        return "<function>"
-    }
-    
-    internal var function: JSValueRef?
-    internal var context: JSValueRef? = nil
-    
-    public required init(function: JSValueRef?) {
-        self.function = function
-    }
-    
-    public var description: String {
-        return string
-    }
-    
-    public var debugDescription: String {
-        return string
-    }
-}
-
 extension JSExport: JSConvertible, CustomStringConvertible, CustomDebugStringConvertible {
     public static func from(jsValue: JSValueRef, context: JSContextRef) -> Self? {
         let info = JSObjectGetPrivate(jsValue).assumingMemoryBound(to: JSExportInfo.self)
@@ -351,7 +310,8 @@ extension JSExport: JSConvertible, CustomStringConvertible, CustomDebugStringCon
     }
     
     public var string: String {
-        return "<class instance>"
+        // will be the name of the class conforming to JSExport
+        return "\(Self.self)"
     }
     
     public var description: String {
@@ -361,5 +321,142 @@ extension JSExport: JSConvertible, CustomStringConvertible, CustomDebugStringCon
     public var debugDescription: String {
         return string
     }
+}
 
+
+// MARK: - JSCallable Types
+
+internal protocol JSCallable: JSConvertible {
+    var valueRef: JSValueRef { get }
+    var context: JSContextRef { get }
+    /// implement this as weak
+    var engine: JSEngine? { get set }
+}
+extension JSEngine {
+    internal func makeCallableIfNecessary(_ value: inout JSConvertible?) {
+        if var v = value as? JSCallable {
+            v.engine = self
+            value = v
+        }
+    }
+}
+
+public class JSObject: JSConvertible, JSCallable, CustomStringConvertible, CustomDebugStringConvertible {
+    internal let valueRef: JSValueRef
+    internal let context: JSContextRef
+    internal weak var engine: JSEngine? = nil
+    
+    public static func from(jsValue: JSValueRef, context: JSContextRef) -> Self? {
+        return Self.init(object: jsValue, context: context)
+    }
+    
+    public func jsValue(context: JSContextRef) -> JSValueRef? {
+        return valueRef
+    }
+    
+    public var string: String {
+        return String(describing: dictionary)
+    }
+    
+    public var description: String {
+        return string
+    }
+    
+    public var debugDescription: String {
+        return string
+    }
+    
+    public var dictionary: [String: JSConvertible]? {
+        var result = [String: JSConvertible]()
+        let properties = self.keys
+        for key in properties {
+            let propertyName = JSStringRefWrapper(value: key)
+            let v = JSObjectGetProperty(context, valueRef, propertyName.ref, nil)
+            let value = valueRefToType(context: context, value: v)
+            result[key] = value
+        }
+        return result
+    }
+    
+    public var keys: [String] {
+        let names = JSObjectCopyPropertyNames(context, valueRef)
+        defer { JSPropertyNameArrayRelease(names) }
+        
+        let count = JSPropertyNameArrayGetCount(names)
+        let list = (0..<count).map { JSPropertyNameArrayGetNameAtIndex(names, $0)! }
+        
+        var result = [String]()
+        for item in list {
+            if let s = String.from(jsString: item) { result.append(s) }
+        }
+        return result
+    }
+    
+    public var className: String {
+        return engine?.evaluate(script: "this.constructor.name", this: valueRef)?.string ?? "Unknown"
+    }
+    
+    internal required init(object: JSValueRef, context: JSContextRef) {
+        self.valueRef = object
+        self.context = context
+    }
+    
+    subscript(_ property: String) -> JSConvertible? {
+        get {
+            let value = engine?.run(closure: {
+                let propertyName = JSStringRefWrapper(value: property)
+                let v = JSObjectGetProperty(context, valueRef, propertyName.ref, nil)
+                let value = valueRefToType(context: context, value: v)
+                engine?.makeCallableIfNecessary(value)
+                return value
+            })
+            return value
+        }
+        set {
+            engine?.run(closure: {
+                let propertyName = JSStringRefWrapper(value: property)
+                JSObjectSetProperty(context, valueRef, propertyName.ref, newValue?.jsValue(context: context), 0, nil)
+                return nil
+            })
+        }
+    }
+    
+    public func call(functionName: String, args: [JSConvertible?]) -> JSConvertible? {
+        return engine?.call(functionName: functionName, this: valueRef, args: args)
+    }
+}
+
+public class JSFunction: JSConvertible, JSCallable, CustomStringConvertible, CustomDebugStringConvertible {
+    internal let valueRef: JSValueRef
+    internal let context: JSContextRef
+    internal weak var engine: JSEngine? = nil
+    
+    public static func from(jsValue: JSValueRef, context: JSContextRef) -> Self? {
+        return Self.init(function: jsValue, context: context)
+    }
+    
+    public func jsValue(context: JSContextRef) -> JSValueRef? {
+        return valueRef
+    }
+    
+    public var string: String {
+        return "<js function>"
+    }
+    
+    internal required init(function: JSValueRef, context: JSContextRef) {
+        self.valueRef = function
+        self.context = context
+    }
+    
+    public var description: String {
+        return string
+    }
+    
+    public var debugDescription: String {
+        return string
+    }
+    
+    public func call(args: [JSConvertible?]) -> JSConvertible? {
+        return engine?.call(function: self, args: args)
+    }
 }

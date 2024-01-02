@@ -150,17 +150,22 @@ class CoreTests: XCTestCase {
         }
         """)*/
 
-        engine.evaluate(script: "console.log('hello');")
+        /*engine.evaluate(script: "console.log('hello');")
         engine.evaluate(script: "printPrototype(console);")
         engine.evaluate(script: "printPrototype(EdgeFunction);")
-        engine.evaluate(script: "console.log(EdgeFunction.myStaticBool);")
+        engine.evaluate(script: "console.log(EdgeFunction.myStaticBool);")*/
         
         /*engine.evaluate(script: "let a = new EdgeFunction(true);")
         engine.evaluate(script: "a.myInstanceMethod(true);")
-        engine.evaluate(script: "printPrototype(a);")*/
+        engine.evaluate(script: "printPrototype(a);")
         
-        engine.evaluate(script: "printPrototype(TestSuper);")
+        engine.evaluate(script: "printPrototype(TestSuper);")*/
         engine.evaluate(script: "let b = new TestSuper(true);")
+        let b = engine.value(for: "b") as! JSObject
+        print(b)
+        print(b.className)
+        let x = engine.evaluate(script: "b.constructor.name")
+        print(x)
         engine.evaluate(script: "printPrototype(b);")
         engine.evaluate(script: "console.log(TestSuper);")
         let r = engine.evaluate(script: "b.myInstanceMethod(false)")
