@@ -23,7 +23,7 @@ let targets: [Target] = [
 let targets: [Target] = [
     .systemLibrary(name: "CJavaScriptCore",
         pkgConfig: "javascriptcoregtk-4.0", 
-        providers: [.apt(["libjavascriptcoregtk-4.0-dev"]), .yum(["webkit2gtk"])]),
+        providers: [.apt(["libjavascriptcoregtk-4.1-dev"]), .yum(["javascriptcoregtk4.1-devel"])]),
     .target(name: "Substrata", dependencies: ["CJavaScriptCore"], cSettings: [.headerSearchPath("../CJavaScriptCore/header_maps")])
 ]
 #endif

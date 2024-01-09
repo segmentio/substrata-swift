@@ -23,4 +23,4 @@
 //  THE SOFTWARE.
 //
 
-#include <webkitgtk-4.0/JavaScriptCore/JSContextRef.h>
+#include <webkitgtk-4.1/JavaScriptCore/JSContextRef.h>

@@ -12,11 +12,20 @@ import JavaScriptCore
 import CJavaScriptCore
 #endif
 
+internal struct JSClassInfo {
+    let classRef: JSClassRef
+    let nativeType: JSExport.Type
+}
+
 public protocol JSStatic {
     static func staticInit()
 }
 
 open class JSExport {
+    private static var bookKeeping = [JSObjectRef: JSClassInfo]()
+    
+    internal static var exportProperties = [String: JSProperty]()
+    internal static var exportMethods = [String: JSFunctionDefinition]()
     internal var exportProperties = [String: JSProperty]()
     internal var exportMethods = [String: JSFunctionDefinition]()
     internal var valueRef: JSValueRef? = nil
@@ -25,44 +34,56 @@ open class JSExport {
 }
 
 extension JSExport {
+    /*
+     This lock is shared between instances obviously.  The same object can be exported
+     to different engines, across threads, etc.  We can't store our data in the VM so
+     we're left to our own devices.
+     */
+    static let lock = NSLock()
+    
+    public static func export(property: JSProperty, as name: String) {
+        lock.lock()
+        Self.exportProperties[name] = property
+        lock.unlock()
+    }
+
     public static func export(method: @escaping JSFunctionDefinition, as name: String) {
-        let className = String(describing: Self.self)
-        let classInfo = JSStaticStorage.lookup(className: className)
-        classInfo.exportMethods[name] = method
+        lock.lock()
+        if Self.exportMethods[name] == nil {
+            Self.exportMethods[name] = method
+        }
+        lock.unlock()
     }
     
     public func export(method: @escaping JSFunctionDefinition, as name: String) {
+        Self.lock.lock()
         exportMethods[name] = method
+        Self.lock.unlock()
     }
     
     public func export(property: JSProperty, as name: String) {
-        print("Exporting property `\(name)`.")
+        Self.lock.lock()
         exportProperties[name] = property
-    }
-}
-
-extension JSExport {
-    internal static var exportMethods: [String: JSFunctionDefinition] {
-        let name = String(describing: Self.self)
-        return JSStaticStorage.lookup(className: name).exportMethods
-    }
-}
-
-internal class JSStaticStorage {
-    internal class ClassInfo {
-        internal var exportProperties = [String: JSProperty]()
-        internal var exportMethods = [String: JSFunctionDefinition]()
+        Self.lock.unlock()
     }
     
-    internal static var lookup = [String: ClassInfo]()
-    internal static func lookup(className: String) -> ClassInfo {
-        var classInfo: ClassInfo
-        if let found = JSStaticStorage.lookup[className] {
-            classInfo = found
-        } else {
-            classInfo = JSStaticStorage.ClassInfo()
-            lookup[className] = classInfo
+    internal static func addEntry(ref: JSObjectRef, classInfo: JSClassInfo) {
+        Self.lock.lock()
+        bookKeeping[ref] = classInfo
+        Self.lock.unlock()
+    }
+    
+    internal static func removeEntry(ref: JSObjectRef) {
+        Self.lock.lock()
+        bookKeeping.removeValue(forKey: ref)
+        Self.lock.unlock()
+    }
+    
+    internal static func getEntry(ref: JSObjectRef) -> JSClassInfo? {
+        Self.lock.lock()
+        defer {
+            Self.lock.unlock()
         }
-        return classInfo
+        return bookKeeping[ref]
     }
 }

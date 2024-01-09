@@ -23,4 +23,4 @@
 //  THE SOFTWARE.
 //
 
-#include <webkitgtk-4.0/JavaScriptCore/JSTypedArray.h>
+#include <webkitgtk-4.1/JavaScriptCore/JSTypedArray.h>

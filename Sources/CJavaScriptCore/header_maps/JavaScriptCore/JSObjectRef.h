@@ -23,4 +23,4 @@
 //  THE SOFTWARE.
 //
 
-#include <webkitgtk-4.0/JavaScriptCore/JSObjectRef.h>
+#include <webkitgtk-4.1/JavaScriptCore/JSObjectRef.h>

@@ -330,13 +330,13 @@ internal protocol JSCallable: JSConvertible {
     var valueRef: JSValueRef { get }
     var context: JSContextRef { get }
     /// implement this as weak
-    var engine: JSEngine? { get set }
+    var engine: JSEngine? { get }
 }
+
 extension JSEngine {
-    internal func makeCallableIfNecessary(_ value: inout JSConvertible?) {
-        if var v = value as? JSCallable {
-            v.engine = self
-            value = v
+    internal func makeCallableIfNecessary(_ value: JSConvertible?) {
+        if let v = value as? JSCallable {
+            JSEngine.setEngineForContext(ref: v.context, engine: self)
         }
     }
 }
@@ -344,7 +344,9 @@ extension JSEngine {
 public class JSObject: JSConvertible, JSCallable, CustomStringConvertible, CustomDebugStringConvertible {
     internal let valueRef: JSValueRef
     internal let context: JSContextRef
-    internal weak var engine: JSEngine? = nil
+    internal weak var engine: JSEngine? {
+        return JSEngine.engineForContext(ref: context)
+    }
     
     public static func from(jsValue: JSValueRef, context: JSContextRef) -> Self? {
         return Self.init(object: jsValue, context: context)
@@ -429,8 +431,10 @@ public class JSObject: JSConvertible, JSCallable, CustomStringConvertible, Custo
 public class JSFunction: JSConvertible, JSCallable, CustomStringConvertible, CustomDebugStringConvertible {
     internal let valueRef: JSValueRef
     internal let context: JSContextRef
-    internal weak var engine: JSEngine? = nil
-    
+    internal weak var engine: JSEngine? {
+        return JSEngine.engineForContext(ref: context)
+    }
+
     public static func from(jsValue: JSValueRef, context: JSContextRef) -> Self? {
         return Self.init(function: jsValue, context: context)
     }

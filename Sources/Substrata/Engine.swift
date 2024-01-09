@@ -13,6 +13,9 @@ import CJavaScriptCore
 #endif
 
 public class JSEngine {
+    private static var __engineLock = NSLock()
+    private static var __engineRefs = [JSContextRef: JSEngine]()
+    
     internal let contextGroup: JSContextGroupRef
     internal let globalContext: JSGlobalContextRef
     internal let globalObject: JSContextRef
@@ -94,7 +97,7 @@ public class JSEngine {
             let script = JSStringRefWrapper(value: script)
             let value = JSEvaluateScript(globalContext, script.ref, nil, nil, 0, &exception)
             result = valueRefToType(context: globalContext, value: value)
-            makeCallableIfNecessary(&result)
+            makeCallableIfNecessary(result)
         }
         return result
     }
@@ -114,7 +117,8 @@ public class JSEngine {
             let info: UnsafeMutablePointer<JSExportInfo> = .allocate(capacity: 1)
             info.initialize(to: JSExportInfo(type: type, jsClassRef: classRef, instance: nil, callback: nil))
             let classObject = JSObjectMakeConstructor(context, classRef, class_constructor)!
-            JSExportBookkeeping[classObject] = JSClassInfo(classRef: classRef, nativeType: type)
+            let classInfo = JSClassInfo(classRef: classRef, nativeType: type)
+            JSExport.addEntry(ref: classObject, classInfo: classInfo)
             
             addMethods(object: classObject, context: context, methods: type.exportMethods)
             
@@ -191,7 +195,7 @@ public class JSEngine {
         let value = rawEvaluate(script: keyPath)
         jsQueue.sync {
             result = valueRefToType(context: globalContext, value: value)
-            makeCallableIfNecessary(&result)
+            makeCallableIfNecessary(result)
         }
         return result
     }
@@ -224,7 +228,7 @@ public class JSEngine {
                 let args = args.map { jsTyped($0, context: self.globalContext) }
                 let v = JSObjectCallAsFunction(globalContext, value, nil, args.count, args.isEmpty ? nil : args, &exception)
                 result = valueRefToType(context: globalContext, value: v)
-                makeCallableIfNecessary(&result)
+                makeCallableIfNecessary(result)
             }
         }
         return result
@@ -238,7 +242,7 @@ public class JSEngine {
                 let args = args.map { jsTyped($0, context: self.globalContext) }
                 let v = JSObjectCallAsFunction(globalContext, value, nil, args.count, args.isEmpty ? nil : args, &exception)
                 result = valueRefToType(context: globalContext, value: v)
-                makeCallableIfNecessary(&result)
+                makeCallableIfNecessary(result)
             }
         }
         return result
@@ -265,7 +269,7 @@ extension JSEngine {
             let script = JSStringRefWrapper(value: script)
             let value = JSEvaluateScript(globalContext, script.ref, this, nil, 0, &exception)
             result = valueRefToType(context: globalContext, value: value)
-            makeCallableIfNecessary(&result)
+            makeCallableIfNecessary(result)
         }
         return result
     }
@@ -274,5 +278,21 @@ extension JSEngine {
     internal func setupProvidedObjects() {
         export(type: Console.self, className: "console")
         evaluate(script: "var \(JSDataBridge.dataBridgeKey) = {};")
+    }
+}
+
+// MARK: - Internal stuff
+
+extension JSEngine {
+    internal static func engineForContext(ref: JSContextRef) -> JSEngine? {
+        __engineLock.lock()
+        defer { __engineLock.unlock() }
+        return __engineRefs[ref]
+    }
+    
+    internal static func setEngineForContext(ref: JSContextRef, engine: JSEngine) {
+        __engineLock.lock()
+        __engineRefs[ref] = engine
+        __engineLock.unlock()
     }
 }

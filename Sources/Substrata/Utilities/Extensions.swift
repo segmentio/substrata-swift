@@ -6,7 +6,11 @@
 //
 
 import Foundation
+#if canImport(JavaScriptCore)
 import JavaScriptCore
+#else
+import CJavaScriptCore
+#endif
 
 extension Double {
     internal var isInteger: Bool {
@@ -101,7 +105,7 @@ extension JSEngine {
             let args = args.map { jsTyped($0, context: self.globalContext) }
             let v = JSObjectCallAsFunction(globalContext, value, this, args.count, args.isEmpty ? nil : args, &exception)
             result = valueRefToType(context: globalContext, value: v)
-            makeCallableIfNecessary(&result)
+            makeCallableIfNecessary(result)
         }
         return result
     }

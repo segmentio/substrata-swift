@@ -12,22 +12,6 @@ import JavaScriptCore
 import CJavaScriptCore
 #endif
 
-
-internal struct JSClassInfo {
-    let classRef: JSClassRef
-    let nativeType: JSExport.Type
-}
-
-/**
- This variable holds critical info for any instantiated objects.  There's no way to
- connect an instance to a native type while preserving the prototype, as the prototype is
- only maintained when using JSObjectMakeConstructor, which disables use of JSObjectSetPrivate until
- an actual instance is made.  The entries in this list are removed in the `class_finalize` method.
- 
- This *IS* a global thing .. but lookup/cleanup will be isolated to a given JSEngine instance.
- */
-internal var JSExportBookkeeping = [JSObjectRef: JSClassInfo]()
-
 // MARK: - Classes
 
 internal func genericClassCreate(_ type: JSExport.Type, name: String) -> JSClassRef {
@@ -68,6 +52,7 @@ internal func addMethods(object: JSObjectRef?, context: JSContextRef, methods: [
     guard let object else { return }
    
     if let methods {
+        print(methods)
         for (key, value) in methods {
             let name = JSStringRefWrapper(value: key)
             let functionRef = genericFunctionCreate(value)
@@ -89,7 +74,7 @@ internal func class_constructor(
 ) -> JSObjectRef? {
     guard let context = ctx else { return nil }
     guard let object else { return nil }
-    guard let classInfo = JSExportBookkeeping[object] else { return nil }
+    guard let classInfo = JSExport.getEntry(ref: object) else { return nil }
     
     let newObject = JSObjectMake(ctx, classInfo.classRef, nil)
     
@@ -113,7 +98,7 @@ internal func class_constructor(
 
 internal func class_finalize(_ object: JSObjectRef?) -> Void {
     guard let object else { return }
-    JSExportBookkeeping.removeValue(forKey: object)
+    JSExport.removeEntry(ref: object)
     guard let priv = JSObjectGetPrivate(object) else { return }
     let info = priv.assumingMemoryBound(to: JSExportInfo.self)
     info.deinitialize(count: 1)

@@ -12,8 +12,6 @@ import JavaScriptCore
 import CJavaScriptCore
 #endif
 
-Codable
-
 public protocol JSConvertible {
     static func from(jsValue: JSValueRef, context: JSContextRef) -> Self?
     func jsValue(context: JSContextRef) -> JSValueRef?
