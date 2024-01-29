@@ -8,6 +8,10 @@
 import Foundation
 
 internal class Console: JSExport, JSStatic {
+    #if DEBUG
+    static var logged = [String]()
+    #endif
+    
     static func staticInit() {
         export(method: log, as: "log")
     }
@@ -21,7 +25,13 @@ internal class Console: JSExport, JSStatic {
                 return String(humanized: $0?.string)
             }
         }
-        print(strings.joined(separator: " "))
+        let output = strings.joined(separator: " ")
+        #if DEBUG
+        if isUnitTesting {
+            logged.append(output)
+        }
+        #endif
+        print(output)
         return nil
     }
 }

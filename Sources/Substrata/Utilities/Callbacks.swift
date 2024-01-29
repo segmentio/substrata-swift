@@ -14,14 +14,14 @@ import CJavaScriptCore
 
 // MARK: - Classes
 
-internal func genericClassCreate(_ type: JSExport.Type, name: String) -> JSClassRef {
+internal func genericClassCreate(_ type: JSExport.Type, name: String, staticProps: UnsafePointer<JSStaticValue>?) -> JSClassRef {
     let classRef: JSClassRef = name.withCString { cName in
         var classDef = JSClassDefinition(
             version: 1,
             attributes: JSClassAttributes(kJSClassAttributeNone),
             className: cName,
             parentClass: nil,
-            staticValues: nil,
+            staticValues: staticProps,
             staticFunctions: nil,
             initialize: nil,
             finalize: class_finalize,
@@ -65,6 +65,10 @@ internal func addMethods(object: JSObjectRef?, context: JSContextRef, methods: [
     }
 }
 
+internal func addProperties(object: JSObjectRef?, context: JSContextRef, properties: [String: JSProperty]) {
+    
+}
+
 internal func class_constructor(
     _ ctx: JSContextRef?,
     _ object: JSObjectRef?,
@@ -85,7 +89,10 @@ internal func class_constructor(
 
     JSObjectSetPrivate(newObject, info)
     
-    addMethods(object: newObject, context: context, methods: instance.exportMethods)
+    // add our methods to the prototype, NOT newObject.
+    if let proto = JSObjectGetPrototype(context, newObject) {
+        addMethods(object: proto, context: context, methods: instance.exportedMethods())
+    }
     
     let nativeArgs: [JSConvertible] = (0..<argumentCount).map {
         guard let result = valueRefToType(context: context, value: arguments![$0]) else { return NSNull() }
@@ -136,7 +143,7 @@ internal func property_getter(
     let info = priv.assumingMemoryBound(to: JSExportInfo.self)
     
     if let instance = info.pointee.instance {
-        if let property = instance.exportProperties[propertyName] {
+        if let property = instance.exportedProperties()[propertyName] {
             let v = property.getter()?.jsValue(context: context)
             result = v
         }
@@ -162,7 +169,7 @@ internal func property_setter(
     let info = priv.assumingMemoryBound(to: JSExportInfo.self)
     
     if let instance = info.pointee.instance {
-        if let property = instance.exportProperties[propertyName], let setter = property.setter {
+        if let property = instance.exportedProperties()[propertyName], let setter = property.setter {
             let v = valueRefToType(context: context, value: value)
             setter(v)
             result = true

@@ -111,7 +111,7 @@ public class JSEngine {
                 t.staticInit()
             }
             
-            let classRef = genericClassCreate(type, name: className)
+            let classRef = genericClassCreate(type, name: className, staticProps: type.staticValues())
             exposedClasses[className] = classRef
             
             let info: UnsafeMutablePointer<JSExportInfo> = .allocate(capacity: 1)
@@ -120,7 +120,8 @@ public class JSEngine {
             let classInfo = JSClassInfo(classRef: classRef, nativeType: type)
             JSExport.addEntry(ref: classObject, classInfo: classInfo)
             
-            addMethods(object: classObject, context: context, methods: type.exportMethods)
+            addMethods(object: classObject, context: context, methods: type.exportedMethods())
+            addProperties(object: classObject, context: context, properties: type.exportedProperties())
             
             let name = JSStringRefWrapper(value: className)
             JSObjectSetProperty(context, globalObject, name.ref, classObject, JSPropertyAttributes(kJSPropertyAttributeNone), &exception)
@@ -152,16 +153,7 @@ public class JSEngine {
             instance.valueRef = newObject
             result = instance
             
-            let methods = instance.exportMethods
-            for (key, value) in methods {
-                let name = JSStringRefWrapper(value: key)
-                let functionRef = genericFunctionCreate(value)
-                let info: UnsafeMutablePointer<JSExportInfo> = .allocate(capacity: 1)
-                info.initialize(to: JSExportInfo(type: nil, jsClassRef: functionRef, instance: nil, callback: value))
-                let functionObject = JSObjectMake(context, functionRef, nil)
-                JSObjectSetPrivate(functionObject, info)
-                JSObjectSetProperty(context, newObject, name.ref, functionObject, JSPropertyAttributes(kJSPropertyAttributeNone), nil)
-            }
+            addMethods(object: newObject, context: context, methods: instance.exportedMethods())
         }
         return result
     }
@@ -174,6 +166,7 @@ public class JSEngine {
             let context = self.globalContext
             let classRef = genericFunctionCreate(function)
             exposedFunctions[named] = classRef
+            
             guard let classObject = JSObjectMake(context, classRef, nil) else { return }
             
             let info: UnsafeMutablePointer<JSExportInfo> = .allocate(capacity: 1)
@@ -187,6 +180,15 @@ public class JSEngine {
             result = JSFunction(function: classObject, context: context)
         }
         return result
+    }
+    
+    subscript(_ property: String) -> JSConvertible? {
+        get {
+            return value(for: property)
+        }
+        set {
+            setValue(for: property, value: newValue)
+        }
     }
 
     public func value(for keyPath: String) -> JSConvertible? {

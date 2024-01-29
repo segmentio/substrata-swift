@@ -23,7 +23,7 @@ extension JSConvertible {
         return self as? T
     }
     
-    public func typed<T: JSConvertible>(as: T) -> T? {
+    public func typed<T: JSConvertible>(as: T.Type) -> T? {
         return self as? T
     }
 }

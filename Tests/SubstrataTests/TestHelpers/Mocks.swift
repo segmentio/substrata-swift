@@ -15,6 +15,13 @@ class EdgeFunctionJS: JSExport, JSStatic {
     static func reset() { myStaticBool = true }
     
     static func staticInit() {
+        export(property: JSProperty(getter: {
+            print("aStaticBool read")
+            return myStaticBool
+        }, setter: { value in
+            myStaticBool = value?.typed()
+        }), as: "aStaticBool")
+        
         export(method: getMyStaticBool, as: "getMyStaticBool")
         export(method: setMyStaticBool, as: "setMyStaticBool")
         export(method: myStaticMethod, as: "myStaticMethod")
@@ -118,22 +125,27 @@ class AnalyticsJS: JSExport, JSStatic {
             print("track called with params: \(args)")
             return 1
         }, as: "track")
+        
         export(method: { args in
             print("identify called with params: \(args)")
             return 2
         }, as: "identify")
+        
         export(method: { args in
             print("screen called with params: \(args)")
             return 3
         }, as: "screen")
+        
         export(method: { args in
             print("group called with params: \(args)")
             return 4
         }, as: "group")
+        
         export(method: { args in
             print("alias called with params: \(args)")
             return 5
         }, as: "alias")
+        
         export(method: { args in
             //return EdgeFunctionJS()
             return nil

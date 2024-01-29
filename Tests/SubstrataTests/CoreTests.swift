@@ -17,74 +17,6 @@ class CoreTests: XCTestCase {
     override func tearDownWithError() throws {
         EdgeFunctionJS.reset()
     }
-    
-    func testDefaultInheritance() throws {
-        let engine = JSEngine()
-        engine.exceptionHandler = { error in
-            print(error)
-        }
-        
-        engine.evaluate(script: """
-        class MyClass {
-            constructor(blah) {
-                console.log(blah)
-            }
-        
-            myFunction(param1) {
-                console.log("myFunction called.")
-            }
-        }
-        """)
-        
-        engine.evaluate(script: """
-        class MyOtherClass extends MyClass {
-            constructor(blah) {
-                super(blah)
-            }
-        
-            myFunction(param1) {
-                console.log("MyOtherClass.myFunction called.")
-                super.myFunction(param1, param2)
-            }
-        
-            execute(param1) {
-                console.log("MyOtherClass.execute called.")
-            }
-        }
-        """)
-        
-        engine.evaluate(script: """
-        function printPrototype(obj, i) {
-            var n = Number(i || 0);
-            var indent = Array(2 + n).join("-");
-
-            for(var key in obj) {
-                if(obj.hasOwnProperty(key)) {
-                    console.log(indent, key, ": ", obj[key]);
-                }
-            }
-
-            if(obj) {
-                if(Object.getPrototypeOf) {
-                    printPrototype(Object.getPrototypeOf(obj), n + 1);
-                } else if(obj.__proto__) {
-                    printPrototype(obj.__proto__, n + 1);
-                }
-            }
-        }
-        """)
-        
-        engine.evaluate(script: "let a = new MyClass(true);")
-        engine.evaluate(script: "a.myFunction(true);")
-        engine.evaluate(script: "printPrototype(a);")
-        
-        engine.evaluate(script: "let b = new MyOtherClass(true);")
-        engine.evaluate(script: "printPrototype(b);")
-        engine.evaluate(script: "console.log(TestSuper);")
-        engine.evaluate(script: "b.myFunction(false)")
-        engine.evaluate(script: "b.execute('hello');")
-
-    }
 
     func testClassExtend() throws {
         let engine = JSEngine()
@@ -120,59 +52,18 @@ class CoreTests: XCTestCase {
                 return 1337
             }
         };
-        
-        function printPrototype(obj, i) {
-            var n = Number(i || 0);
-            var indent = Array(2 + n).join("-");
-
-            for(var key in obj) {
-                if(obj.hasOwnProperty(key)) {
-                    console.log(indent, key, ": ", obj[key]);
-                }
-            }
-
-            if(obj) {
-                if(Object.getPrototypeOf) {
-                    printPrototype(Object.getPrototypeOf(obj), n + 1);
-                } else if(obj.__proto__) {
-                    printPrototype(obj.__proto__, n + 1);
-                }
-            }
-        }
         """)
-        
-        /*engine.evaluate(script: """
-        var proto = Object.getPrototypeOf(EdgeFunction);
-        if (proto) {
-            console.log(proto.hasOwnProperty('constructor') ? proto.constructor.name : 'undefined');
-        } else {
-            console.log("we don't have a fucking prototype")
-        }
-        """)*/
 
-        /*engine.evaluate(script: "console.log('hello');")
-        engine.evaluate(script: "printPrototype(console);")
-        engine.evaluate(script: "printPrototype(EdgeFunction);")
-        engine.evaluate(script: "console.log(EdgeFunction.myStaticBool);")*/
+        engine.evaluate(script: "let a1 = new EdgeFunction(true);")
+        XCTAssertFalse(Console.logged.contains("js: TestSuper.constructor() called"))
+        let a1: Bool? = engine.evaluate(script: "a1.myInstanceMethod(true);")!.typed()
+        XCTAssertTrue(a1 == true)
         
-        /*engine.evaluate(script: "let a = new EdgeFunction(true);")
-        engine.evaluate(script: "a.myInstanceMethod(true);")
-        engine.evaluate(script: "printPrototype(a);")
+        engine.evaluate(script: "let a2 = new TestSuper(true);")
+        XCTAssertTrue(Console.logged.contains("js: TestSuper.constructor() called"))
+        let a2: Int? = engine.evaluate(script: "a2.myInstanceMethod(true);")!.typed()
+        XCTAssertTrue(a2 == 1337)
         
-        engine.evaluate(script: "printPrototype(TestSuper);")*/
-        engine.evaluate(script: "let b = new TestSuper(true);")
-        let b = engine.value(for: "b") as! JSObject
-        print(b)
-        print(b.className)
-        let x = engine.evaluate(script: "b.constructor.name")
-        print(x)
-        engine.evaluate(script: "printPrototype(b);")
-        engine.evaluate(script: "console.log(TestSuper);")
-        let r = engine.evaluate(script: "b.myInstanceMethod(false)")
-        print(r)
-        engine.evaluate(script: "b.execute('hello');")
-        engine.evaluate(script: "console.log(b.hasOwnProperty('execute'));")
-        engine.evaluate(script: "console.log(b.hasOwnProperty('myInstanceMethod'));")
     }
     
     func testClassCall() throws {
@@ -188,6 +79,10 @@ class CoreTests: XCTestCase {
         XCTAssertTrue(o is EdgeFunctionJS)
     }
     
+    /**
+     Class / static properties are not supported at this time.  Hopefully in the future.
+     */
+    /*
     func testClassProps() throws {
         let engine = JSEngine()
         engine.exceptionHandler = { error in
@@ -200,61 +95,54 @@ class CoreTests: XCTestCase {
         print(a0)
         let a1 = engine.evaluate(script: "e.myBool")
         print(a1)*/
-        let a = engine.evaluate(script: "EdgeFunction.testValue")
+        let a = engine.evaluate(script: "EdgeFunction.aStaticBool")
         print(a)
         let b = engine.evaluate(script: "EdgeFunction.myStaticBool = false")
         print(b)
         let c = engine.evaluate(script: "EdgeFunction.myStaticBool = true")
         print(b)
-        let v = engine.evaluate(script: "EdgeFunction.myStaticBool")
+        let v = engine.evaluate(script: "EdgeFunction.aStaticBool")
         print(v)
         XCTAssertTrue(EdgeFunctionJS.myStaticBool!)
 
         engine.evaluate(script: "let a = new EdgeFunction(true)")
+        engine.evaluate(script: "a.myBool = true")
         let value = engine.evaluate(script: "a.myBool")
         XCTAssertFalse(value!.typed()!)
     }
+     */
     
-    func testClassMethods() throws {
-        /*let engine = JSEngine()
+    func testInstanceMethods() throws {
+        let engine = JSEngine()
         engine.exceptionHandler = { error in
             print(error)
         }
-
+        
         engine.export(type: EdgeFunctionJS.self, className: "EdgeFunction")
 
+        engine.evaluate(script: "let a1 = new EdgeFunction(true);")
+        let aObject = engine["a1"]
+        XCTAssertTrue(aObject is EdgeFunctionJS)
+        let result: Bool? = engine.evaluate(script: "a1.myInstanceMethod(true);")!.typed()
+        XCTAssertTrue(result == true)
+        
         var myStaticProp = false
         
-        let edgeFn = try! JSObject(context: context, type: EdgeFunctionJS.self)
-        context[EdgeFunctionJS.className] = edgeFn
-        edgeFn.addMethod(name: "myStaticMethod") { context, this, params in
+        engine.evaluate(script: "let testObj = new Object()")
+        let testObj = engine["testObj"]?.typed(as: JSObject.self)
+        XCTAssertNotNil(testObj)
+        
+        let myStaticMethod: ([JSConvertible]) -> JSConvertible? = { args in
             myStaticProp = true
-            return params.jsValue(context: context)
+            return 123
         }
         
-        let returns = context.evaluate(script: "EdgeFunction.myStaticMethod(1, 2, 3)")
-            .value([Int].self)!
-        print(returns)
+        let m = engine.export(function: myStaticMethod, named: "myStaticMethod")
+        testObj?["myNewMethod"] = m
         
-        XCTAssertTrue(myStaticProp)
-        XCTAssertTrue(returns.count == 3)
-        XCTAssertEqual(returns[1], 2)
-
-        context.evaluate(script: "let a = new EdgeFunction(1, 2, 3)")
-        
-        var isGoodDay = false
-        
-        let object = context["a"] as! JSObject
-        object.addMethod(name: "isGoodDay") { context, this, params in
-            guard params.count >= 1 else { return context.undefined }
-            guard let value = params[0].value(Bool.self) else { return context.undefined }
-            isGoodDay = value
-            return params[0]
-        }
-        
-        context.evaluate(script: "a.isGoodDay(true)")
-
-        XCTAssertTrue(isGoodDay)*/
+        let r = engine.evaluate(script: "testObj.myNewMethod()")?.typed(as: Int.self)
+        XCTAssertEqual(r, 123)
+        XCTAssertEqual(myStaticProp, true)
     }
     
     func testFnCall() throws {

@@ -323,7 +323,6 @@ extension JSExport: JSConvertible, CustomStringConvertible, CustomDebugStringCon
     }
 }
 
-
 // MARK: - JSCallable Types
 
 internal protocol JSCallable: JSConvertible {
@@ -405,22 +404,33 @@ public class JSObject: JSConvertible, JSCallable, CustomStringConvertible, Custo
     
     subscript(_ property: String) -> JSConvertible? {
         get {
-            let value = engine?.run(closure: {
-                let propertyName = JSStringRefWrapper(value: property)
-                let v = JSObjectGetProperty(context, valueRef, propertyName.ref, nil)
-                let value = valueRefToType(context: context, value: v)
-                engine?.makeCallableIfNecessary(value)
-                return value
-            })
-            return value
+            return value(for: property)
         }
         set {
-            engine?.run(closure: {
-                let propertyName = JSStringRefWrapper(value: property)
-                JSObjectSetProperty(context, valueRef, propertyName.ref, newValue?.jsValue(context: context), 0, nil)
-                return nil
-            })
+            setValue(for: property, value: newValue)
         }
+    }
+    
+    public func value(for property: String) -> JSConvertible? {
+        let value = engine?.run(closure: {
+            let propertyName = JSStringRefWrapper(value: property)
+            let v = JSObjectGetProperty(context, valueRef, propertyName.ref, nil)
+            let value = valueRefToType(context: context, value: v)
+            engine?.makeCallableIfNecessary(value)
+            return value
+        })
+        return value
+    }
+    
+    @discardableResult
+    public func setValue(for property: String, value: JSConvertible?) -> Bool {
+        var exception: JSValueRef? = nil
+        engine?.run(closure: {
+            let propertyName = JSStringRefWrapper(value: property)
+            JSObjectSetProperty(context, valueRef, propertyName.ref, value?.jsValue(context: context), 0, &exception)
+            return nil
+        })
+        return (exception == nil)
     }
     
     public func call(functionName: String, args: [JSConvertible?]) -> JSConvertible? {
@@ -464,3 +474,4 @@ public class JSFunction: JSConvertible, JSCallable, CustomStringConvertible, Cus
         return engine?.call(function: self, args: args)
     }
 }
+
