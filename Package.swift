@@ -1,50 +1,39 @@
-// swift-tools-version:5.3
+// swift-tools-version: 5.8
+// The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
 
-#if canImport(JavaScriptCore)
-let targets: [Target] = [
-    .target(name: "Substrata")
-]
-#elseif os(Windows)
-// Windows iTunes installs JSC at: C:/Program Files/iTunes/JavaScriptCore.dll
-// See also: https://pub.dev/packages/flutter_jscore#windows
-let targets: [Target] = [
-    .target(name: "Substrata", 
-        linkerSettings: [
-            .linkedLibrary("Kernel32", .when(platforms: [.windows])),
-            .linkedLibrary("JavaScriptCore", .when(platforms: [.windows])),
-            .linkedLibrary("CoreFoundation", .when(platforms: [.windows])),
-            .linkedLibrary("WTF", .when(platforms: [.windows])),
-            .linkedLibrary("ASL", .when(platforms: [.windows])),
-        ])
-]
-#else // no native JavaScriptCore falls back to javascriptcoregtk
-let targets: [Target] = [
-    .systemLibrary(name: "CJavaScriptCore",
-        pkgConfig: "javascriptcoregtk-4.0", 
-        providers: [.apt(["libjavascriptcoregtk-4.0-dev"]), .yum(["webkit2gtk"])]),
-    .target(name: "Substrata", dependencies: ["CJavaScriptCore"], cSettings: [.headerSearchPath("../CJavaScriptCore/header_maps")])
-]
-#endif
-
 let package = Package(
     name: "Substrata",
-    platforms: [
-        .macOS("10.15"),
-        .iOS("13.0"),
-        .tvOS("11.0"),
-    ],
     products: [
-        .library(name: "Substrata", targets: ["Substrata"]),
+        // Products define the executables and libraries a package produces, making them visible to other packages.
+        .library(
+            name: "Substrata",
+            targets: ["Substrata"]),
     ],
-    targets: targets + [
+    targets: [
+        // Targets are the basic building blocks of a package, defining a module or a test suite.
+        // Targets can depend on other targets in this package and products from dependencies.
+        .target(
+            name: "SubstrataQuickJS",
+            cSettings: [
+                .unsafeFlags([
+                    "-Wno-implicit-int-float-conversion",
+                    "-Wno-conversion"
+                ]),
+                .define("CONFIG_BIGNUM"),
+                .define("CONFIG_ATOMICS"),
+                .define("DUMP_LEAKS")
+            ]
+        ),
+        .target(
+            name: "Substrata", 
+            dependencies: ["SubstrataQuickJS"]),
         .testTarget(
             name: "SubstrataTests",
             dependencies: ["Substrata"],
             resources: [
-                .copy("TestHelpers/ConversionTestData.js"),
-                .copy("TestHelpers/BundleTest.js")
+                .copy("Support/ConversionTestData.js")
             ])
     ]
 )

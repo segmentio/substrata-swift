@@ -1,65 +1,62 @@
 //
 //  ConversionTests.swift
+//  
 //
-//
-//  Created by Brandon Sneed on 5/2/22.
+//  Created by Brandon Sneed on 1/23/23.
 //
 
 import XCTest
 @testable import Substrata
 
-class ConversionTests: XCTestCase {
+final class ConversionTests: XCTestCase {
 
     override func setUpWithError() throws {
         // Put setup code here. This method is called before the invocation of each test method in the class.
     }
 
     override func tearDownWithError() throws {
-        // look for leaks ...
-        let leaks = JSLeaks.leaked()
-        if leaks.count > 0 {
-            XCTFail("Something was leaked in the previous test: \(leaks)")
-        }
+        // Put teardown code here. This method is called after the invocation of each test method in the class.
+        EdgeFunctionJS.reset()
     }
 
     func testMassConversionOut() throws {
         let engine = JSEngine()
-        engine.errorHandler = { error in
+        engine.exceptionHandler = { error in
             XCTFail()
             print(error)
         }
         
-        try! engine.expose(name: "EdgeFunction", classType: EdgeFunctionJS.self)
+        engine.export(type: EdgeFunctionJS.self, className:"EdgeFunction")
         
         let bundle = Bundle.module
         let bundleURL = bundle.url(forResource: "ConversionTestData", withExtension: "js")
         engine.loadBundle(url: bundleURL!)
         
-        let r = engine.object(key: "conversionSamples")
+        let r = engine.value(for: "conversionSamples")
         XCTAssertNotNil(r)
         
-        let samples = r as? [String: JSConvertible]
+        let samples = r?.typed(as: Dictionary.self)
         XCTAssertNotNil(samples)
         
         // test basic stuff ....
-        XCTAssertTrue(samples!["anInt"]!.typed(Int.self) == 1234)
-        XCTAssertTrue(samples!["aBool"]!.typed(Bool.self) == true)
-        XCTAssertTrue(samples!["anotherBool"]!.typed(Bool.self) == false)
-        XCTAssertTrue(samples!["aDouble"]!.typed(Double.self) == 3.14)
-        XCTAssertTrue(samples!["aString"]!.typed(String.self) == "booya")
-        XCTAssertTrue(samples!["aNull"]!.typed(NSNull.self) != nil)
+        XCTAssertTrue(samples!["anInt"]!.typed() == 1234)
+        XCTAssertTrue(samples!["aBool"]!.typed() == true)
+        XCTAssertTrue(samples!["anotherBool"]!.typed() == false)
+        XCTAssertTrue(samples!["aDouble"]!.typed() == 3.14)
+        XCTAssertTrue(samples!["aString"]!.typed() == "booya")
+        XCTAssertTrue(samples!["aNull"]!.typed() == NSNull())
         XCTAssertTrue((samples!["anArray"]! as! [JSConvertible]).count == 6)
-        XCTAssertTrue((samples!["aDictionary"]! as! [String: JSConvertible]).keys.count == 7)
+        XCTAssertTrue((samples!["aDictionary"]!.typed(as: Dictionary.self))!.keys.count == 7)
         
         // test nested array stuff ...
-        let array = samples!["anArray"]! as! [JSConvertible]
-        let subArray = array[4] as! [JSConvertible]
-        let subDict = array[5] as! [String: JSConvertible]
+        let array = samples!["anArray"]!.typed(as: Array.self)
+        let subArray = array![4] as! [JSConvertible]
+        let subDict = array![5] as! [String: JSConvertible]
         XCTAssertNotNil(array)
         XCTAssertNotNil(subArray)
         XCTAssertNotNil(subDict)
         
-        XCTAssertTrue(array[0] is EdgeFunctionJS)
+        XCTAssertTrue(array![0] is JSClass)
         XCTAssertTrue(subArray[0] as! String == "blah1")
         XCTAssertTrue(subDict["anotherBool"] as! Bool == false)
         
@@ -72,9 +69,10 @@ class ConversionTests: XCTestCase {
         XCTAssertNotNil(nestedDict)
         
         XCTAssertTrue(dict["aDouble"] as! Double == 3.14)
-        XCTAssertTrue(nestedDict["anEdgeFn"]! is EdgeFunctionJS)
+        XCTAssertTrue(nestedDict["anEdgeFn"]! is JSClass)
         XCTAssertTrue(nestedArray[0] as! String == "test1")
         XCTAssertTrue((nestedDict["anArray"] as! [JSConvertible]).count == 4)
     }
+
 
 }
