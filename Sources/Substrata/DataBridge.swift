@@ -28,7 +28,7 @@ public class JSDataBridge {
         }
         
         set(value) {
-            setValue(for: keyPath, value: value)
+            setValue(value, for: keyPath)
         }
     }
     
@@ -39,9 +39,9 @@ public class JSDataBridge {
     }
     
     @discardableResult
-    public func setValue(for keyPath: String, value: JSConvertible?) -> Bool {
+    public func setValue(_ value: JSConvertible?, for keyPath: String) -> Bool {
         guard let engine = engine else { return false }
-        return engine.setValue(for: "\(Self.dataBridgeKey).\(keyPath)", value: value)
+        return engine.setValue(value, for: "\(Self.dataBridgeKey).\(keyPath)")
     }
 }
 

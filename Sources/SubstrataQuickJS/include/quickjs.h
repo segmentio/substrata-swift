@@ -567,12 +567,18 @@ static inline void JS_FreeValue(JSContext *ctx, JSValue v)
 {
     if (JS_VALUE_HAS_REF_COUNT(v)) {
         JSRefCountHeader *p = (JSRefCountHeader *)JS_VALUE_GET_PTR(v);
-        if (--p->ref_count <= 0) {
-            // BKS: only delete if it's 0; prevents double-free.
+        if (p->ref_count > 0) {
+            p->ref_count--;
             if (p->ref_count == 0) {
                 __JS_FreeValue(ctx, v);
             }
         }
+        /*if (--p->ref_count <= 0) {
+            // BKS: only delete if it's 0; prevents double-free.
+            if (p->ref_count == 0) {
+                __JS_FreeValue(ctx, v);
+            }
+        }*/
     }
 }
 JS_EXTERN void __JS_FreeValueRT(JSRuntime *rt, JSValue v);
@@ -580,12 +586,18 @@ static inline void JS_FreeValueRT(JSRuntime *rt, JSValue v)
 {
     if (JS_VALUE_HAS_REF_COUNT(v)) {
         JSRefCountHeader *p = (JSRefCountHeader *)JS_VALUE_GET_PTR(v);
-        if (--p->ref_count <= 0) {
-            // BKS: only delete if it's 0; prevents double-free.
+        if (p->ref_count > 0) {
+            p->ref_count--;
             if (p->ref_count == 0) {
                 __JS_FreeValueRT(rt, v);
             }
         }
+        /*if (--p->ref_count <= 0) {
+            // BKS: only delete if it's 0; prevents double-free.
+            if (p->ref_count == 0) {
+                __JS_FreeValueRT(rt, v);
+            }
+        }*/
     }
 }
 

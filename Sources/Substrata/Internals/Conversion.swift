@@ -23,6 +23,27 @@ internal func returnJSValueRef(context: JSContext, function: JSFunctionDefinitio
     return result
 }
 
+internal func returnJSValueRef(context: JSContext, function: JSPropertyGetterDefinition) -> JSValue {
+    // make sure we're consistent with our types.
+    // nil = undefined in js.
+    // nsnull = null in js.
+    var result = JSValue.undefined
+    let v = function() as? JSInternalConvertible
+    if let v = v?.toJSValue(context: context) {
+        result = v
+    }
+
+    return result
+}
+
+internal func returnJSValueRef(context: JSContext, function: JSPropertySetterDefinition, arg: JSConvertible?) -> JSValue {
+    // make sure we're consistent with our types.
+    // nil = undefined in js.
+    // nsnull = null in js.
+    function(arg)
+    return JSValue.undefined
+}
+
 internal func jsArgsToTypes(context: JSContext?, argc: Int32, argv: UnsafeMutablePointer<JSValue>?) -> [JSConvertible] {
     var result = [JSConvertible]()
     guard let argv, argc > 0 else { return result }
@@ -359,7 +380,7 @@ public class JSClass: JSRetainedValue, JSConvertible, JSInternalConvertible {
                 self.context = context
                 context.addActiveValue(value: self)
             } else {
-                JS_FreeValue(context.ref, v)
+                v.free(context)
                 return nil
             }
         } else {
@@ -369,6 +390,35 @@ public class JSClass: JSRetainedValue, JSConvertible, JSInternalConvertible {
     
     deinit {
         context?.freeActiveValue(value: self)
+    }
+    
+    public subscript(key: String) -> JSConvertible? {
+        get {
+            return value(for: key)
+        }
+        
+        set(value) {
+            setValue(value, for: key)
+        }
+    }
+    
+    public func value(for key: String) -> JSConvertible? {
+        guard let context else { return nil }
+        var result: JSConvertible? = nil
+        context.performThreadSafe {
+            let r = JS_GetPropertyStr(context.ref, value, key)
+            result = r.toJSConvertible(context: context)
+        }
+        return result
+    }
+    
+    public func setValue(_ value: JSConvertible?, for key: String) {
+        guard let context else { return }
+        let newValue = value as? JSInternalConvertible
+        context.performThreadSafe {
+            let jsv = newValue?.toJSValue(context: context) ?? JSValue.null
+            JS_SetPropertyStr(context.ref, self.value, key, jsv)
+        }
     }
     
     public func call(method: String, args: [JSConvertible]?) -> JSConvertible? {

@@ -19,11 +19,27 @@ internal func typedCall(context: JSContextRef?, magic: Int32, argc: Int32, argv:
     return result
 }
 
+internal func typedGetter(context: JSContextRef?, magic: Int32) -> JSValue {
+    var result = JSValue.undefined
+    guard let context = context?.opaqueContext else { return result }
+        
+    guard let fn: JSPropertyGetterDefinition = context.findExport(propertyID: magic) else { return result }
+    result = returnJSValueRef(context: context, function: fn)
+    
+    return result
+}
+
+internal func typedSetter(context: JSContextRef?, magic: Int32, arg: JSValue) -> JSValue {
+    guard let context = context?.opaqueContext else { return JSValue.undefined }
+    let arg = arg.toJSConvertible(context: context)
+    
+    guard let fn: JSPropertySetterDefinition = context.findExport(propertyID: magic) else { return JSValue.undefined }
+    return returnJSValueRef(context: context, function: fn, arg: arg)
+}
+
 internal func typedConstruct(context: JSContextRef?, this: JSValue, magic: Int32, argc: Int32, argv: UnsafeMutablePointer<JSValue>?) -> JSValue {
     var result = JSValue.undefined
-
     guard let context = context?.opaqueContext else { return result }
-    
     let args = jsArgsToTypes(context: context, argc: argc, argv: argv)
         
     guard let classType: JSClassInfo = context.findExport(classID: magic) else { return result }
@@ -47,6 +63,41 @@ internal func typedConstruct(context: JSContextRef?, this: JSValue, magic: Int32
     }
     
     context.addExport(instance: classInstance)
+    
+    // set up our instance properties ...
+    let properties = instance.exportedProperties
+    for export in properties {
+        // get'ers gonna get.
+        var propFlags = JS_PROP_HAS_WRITABLE | JS_PROP_HAS_ENUMERABLE | JS_PROP_HAS_GET
+        let getterID = context.newPropertyID()
+        let getter = JS_NewCFunctionMagic(context.ref, { context, this, argc, argv, magic in
+            return typedGetter(context: context, magic: magic)
+        }, export.key, 1, JS_CFUNC_generic_magic, getterID)
+        context.addExport(propertyID: getterID, value: export.value.getter)
+        
+        var setter = JSValue.undefined
+        // if we have a setter for this homeboy, set it up.
+        if let exportSetter = export.value.setter {
+            propFlags |= JS_PROP_HAS_SET
+            
+            let setterID = context.newPropertyID()
+        
+            setter = JS_NewCFunctionMagic(context.ref, { context, this, argc, argv, magic in
+                let arg = argv?[0] ?? JSValue.null
+                return typedSetter(context: context, magic: magic, arg: arg)
+            }, export.key, 1, JS_CFUNC_generic_magic, setterID)
+            
+            context.addExport(propertyID: setterID, value: exportSetter)
+        }
+        
+        let propAtom = JS_NewAtom(context.ref, export.key)
+        JS_DefineProperty(context.ref, result, propAtom, JSValue.undefined, getter, setter, Int32(propFlags))
+        JS_FreeAtom(context.ref, propAtom)
+        
+        // avoid leakage.
+        getter.free(context)
+        setter.free(context)
+    }
     
     return result
 }
@@ -75,4 +126,5 @@ func typedInstanceMethod(context: JSContextRef?, this: JSValue, argc: Int32, arg
     
     return result
 }
+
 

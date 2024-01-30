@@ -76,7 +76,7 @@ public class JSEngine {
         }
         
         set(value) {
-            setValue(for: keyPath, value: value)
+            setValue(value, for: keyPath)
         }
     }
     
@@ -87,7 +87,7 @@ public class JSEngine {
     }
     
     @discardableResult
-    public func setValue(for keyPath: String, value: JSConvertible?) -> Bool {
+    public func setValue(_ value: JSConvertible?, for keyPath: String) -> Bool {
         var result: Bool = false
     
         guard keyPath.count > 0 else { return result }
@@ -110,7 +110,7 @@ public class JSEngine {
                 pathValue = JS_Eval(context.ref, path, path.lengthOfBytes(using: .utf8), Constants.Evaluator, 0)
                 pathValue.handlePossibleException(context: context)
                 result = 0 < JS_SetPropertyStr(context.ref, pathValue, last, value)
-                JS_FreeValue(context.ref, pathValue)
+                pathValue.free(context)
             }
         }
         
@@ -139,7 +139,7 @@ public class JSEngine {
             
             JS_SetPropertyStr(context.ref, context.globalRef, name, newFunction)
             result = JSFunction(value: newFunction, context: context)
-            JS_FreeValue(context.ref, newFunction)
+            newFunction.free(context)
             
             context.addExport(functionID: functionID, value: function)
         }
@@ -162,7 +162,7 @@ public class JSEngine {
             let r = JS_Eval(context.ref, code, code.lengthOfBytes(using: .utf8), Constants.Evaluator, 0)
             r.handlePossibleException(context: context)
             result = JSClass(value: r, context: context)
-            JS_FreeValue(context.ref, r)
+            r.free(context)
             
             classInfo.waitingToAttach = nil
         }
@@ -233,6 +233,9 @@ public class JSEngine {
             // instance methods get set on the class prototype.
             JS_SetClassProto(context.ref, classID, instanceProto)
             
+            // NOTE: Notice we're skipping instance properties ...
+            // Those will be applied in typedConstructor on a per-instance basis.
+            
             // set up statics for class
             // *************************************
             // statics get set up on the *constructor* itself.
@@ -241,8 +244,9 @@ public class JSEngine {
                 s.staticInit()
             }
             
-            let staticExports = type.exportedMethods
-            for export in staticExports {
+            // methods
+            let staticMethods = type.exportedMethods
+            for export in staticMethods {
                 let functionID = context.newContextFunctionID()
                 
                 let method = JS_NewCFunctionMagic(context.ref, { context, this, argc, argv, magic in
@@ -251,6 +255,41 @@ public class JSEngine {
                 
                 context.addExport(functionID: functionID, value: export.value)
                 JS_SetPropertyStr(context.ref, constructor, export.key, method)
+            }
+            
+            // properties
+            let staticProperties = type.exportedProperties
+            for export in staticProperties {
+                // get'ers gonna get.
+                var propFlags = JS_PROP_HAS_WRITABLE | JS_PROP_HAS_ENUMERABLE | JS_PROP_HAS_GET
+                let getterID = context.newPropertyID()
+                let getter = JS_NewCFunctionMagic(context.ref, { context, this, argc, argv, magic in
+                    return typedGetter(context: context, magic: magic)
+                }, export.key, 1, JS_CFUNC_generic_magic, getterID)
+                context.addExport(propertyID: getterID, value: export.value.getter)
+                
+                var setter = JSValue.undefined
+                // if we have a setter for this homeboy, set it up.
+                if let exportSetter = export.value.setter {
+                    propFlags |= JS_PROP_HAS_SET
+                    
+                    let setterID = context.newPropertyID()
+                
+                    setter = JS_NewCFunctionMagic(context.ref, { context, this, argc, argv, magic in
+                        let arg = argv?[0] ?? JSValue.null
+                        return typedSetter(context: context, magic: magic, arg: arg)
+                    }, export.key, 1, JS_CFUNC_generic_magic, setterID)
+                    
+                    context.addExport(propertyID: setterID, value: exportSetter)
+                }
+                
+                let propAtom = JS_NewAtom(context.ref, export.key)
+                JS_DefineProperty(context.ref, constructor, propAtom, JSValue.undefined, getter, setter, Int32(propFlags))
+                JS_FreeAtom(context.ref, propAtom)
+                
+                // avoid leakage.
+                getter.free(context)
+                setter.free(context)
             }
         }
     }

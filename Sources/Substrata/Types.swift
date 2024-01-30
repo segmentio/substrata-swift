@@ -34,8 +34,24 @@ public protocol JSStatic {
     static func staticInit()
 }
 
+public typealias JSPropertyGetterDefinition = () -> JSConvertible?
+public typealias JSPropertySetterDefinition = (JSConvertible?) -> Void
+
+public class JSProperty {
+    internal let getter: JSPropertyGetterDefinition
+    internal let setter: JSPropertySetterDefinition?
+    
+    init(getter: @escaping JSPropertyGetterDefinition, setter: JSPropertySetterDefinition?) {
+        self.getter = getter
+        self.setter = setter
+    }
+}
+
 open class JSExport {
     static let exportLock = NSLock()
+    
+    // Class stuff
+    
     static private var _exportedMethods = [String: JSFunctionDefinition]()
     static internal var exportedMethods: [String: JSFunctionDefinition] {
         exportLock.lock()
@@ -44,10 +60,36 @@ open class JSExport {
     }
     static public func exportMethod(named: String, function: @escaping JSFunctionDefinition) {
         exportLock.lock()
+        defer { exportLock.unlock() }
+        if _exportedMethods[named] != nil {
+            /*#if DEBUG
+            assertionFailure("This has already been exported!")
+            #endif*/
+            return
+        }
         _exportedMethods[named] = function
-        exportLock.unlock()
     }
-
+    
+    static private var _exportedProperties = [String: JSProperty]()
+    static internal var exportedProperties: [String: JSProperty] {
+        exportLock.lock()
+        defer { exportLock.unlock() }
+        return _exportedProperties
+    }
+    static public func exportProperty(named: String, getter: @escaping JSPropertyGetterDefinition, setter: JSPropertySetterDefinition? = nil) {
+        exportLock.lock()
+        defer { exportLock.unlock() }
+        if _exportedProperties[named] != nil {
+            /*#if DEBUG
+            assertionFailure("This has already been exported!")
+            #endif*/
+            return
+        }
+        _exportedProperties[named] = JSProperty(getter: getter, setter: setter)
+    }
+    
+    // Instance stuff
+    
     private var _exportedMethods = [String: JSFunctionDefinition]()
     internal var exportedMethods: [String: JSFunctionDefinition] {
         Self.exportLock.lock()
@@ -56,9 +98,35 @@ open class JSExport {
     }
     public func exportMethod(named: String, function: @escaping JSFunctionDefinition) {
         Self.exportLock.lock()
+        defer { Self.exportLock.unlock() }
+        if _exportedMethods[named] != nil {
+            #if DEBUG
+            assertionFailure("This has already been exported!")
+            #endif
+            return
+        }
         _exportedMethods[named] = function
-        Self.exportLock.unlock()
     }
+    
+    private var _exportedProperties = [String: JSProperty]()
+    internal var exportedProperties: [String: JSProperty] {
+        Self.exportLock.lock()
+        defer { Self.exportLock.unlock() }
+        return _exportedProperties
+    }
+    public func exportProperty(named: String, getter: @escaping JSPropertyGetterDefinition, setter: JSPropertySetterDefinition? = nil) {
+        Self.exportLock.lock()
+        defer { Self.exportLock.unlock() }
+        if _exportedProperties[named] != nil {
+            #if DEBUG
+            assertionFailure("This has already been exported!")
+            #endif
+            return
+        }
+        _exportedProperties[named] = JSProperty(getter: getter, setter: setter)
+    }
+    
+    // Overrides
     
     public required init() {
         

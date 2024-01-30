@@ -54,6 +54,7 @@ extension JSValue {
     
     internal func free(_ context: JSContext?) {
         guard let context else { return }
+        OSMemoryBarrier()
         JS_FreeValue(context.ref, self)
     }
     

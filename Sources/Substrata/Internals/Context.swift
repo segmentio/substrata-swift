@@ -18,9 +18,12 @@ internal class JSContext {
     private var classCounter: Int32 = 0
     private var functionCounter: Int32 = 0
     private var methodCounter: Int32 = 0
+    private var propertyCounter: Int32 = 0
     
     internal var classes = [Int32: JSClassInfo]()
     internal var functions = [Int32: JSFunctionDefinition]()
+    internal var propertyGetters = [Int32: JSPropertyGetterDefinition]()
+    internal var propertySetters = [Int32: JSPropertySetterDefinition]()
     internal var instances = [JSClassInstanceInfo]()
     internal var methodIDs = [Int32: String]()
     internal var activeValues = [JSRetainedValue]()
@@ -45,8 +48,6 @@ internal class JSContext {
     }
     
     func shutdown() {
-        builtIns = nil
-        
         exportLock.lock()
         defer { exportLock.unlock() }
         shuttingDown = true
@@ -54,10 +55,11 @@ internal class JSContext {
             ref.opaqueContext = nil
         
             for value in activeValues {
-                JS_FreeValue(ref, value.value)
+                value.value.free(self)
             }
+    
+            globalRef.free(self)
             
-            JS_FreeValue(ref, globalRef)
             JS_FreeContext(ref)
         }
     }
@@ -83,6 +85,14 @@ internal class JSContext {
         defer { exportLock.unlock() }
         let new = methodCounter
         methodCounter += 1
+        return new
+    }
+    
+    func newPropertyID() -> Int32 {
+        exportLock.lock()
+        defer { exportLock.unlock() }
+        let new = propertyCounter
+        propertyCounter += 1
         return new
     }
 }
@@ -111,6 +121,31 @@ extension JSContext {
         return functions[functionID]
     }
     
+    func addExport(propertyID: Int32, value: @escaping JSPropertyGetterDefinition) {
+        exportLock.lock()
+        defer { exportLock.unlock() }
+        if propertyGetters[propertyID] != nil { return }
+        propertyGetters[propertyID] = value
+    }
+    
+    func findExport(propertyID: Int32) -> JSPropertyGetterDefinition? {
+        exportLock.lock()
+        defer { exportLock.unlock() }
+        return propertyGetters[propertyID]
+    }
+    
+    func addExport(propertyID: Int32, value: @escaping JSPropertySetterDefinition) {
+        exportLock.lock()
+        defer { exportLock.unlock() }
+        if propertySetters[propertyID] != nil { return }
+        propertySetters[propertyID] = value
+    }
+    
+    func findExport(propertyID: Int32) -> JSPropertySetterDefinition? {
+        exportLock.lock()
+        defer { exportLock.unlock() }
+        return propertySetters[propertyID]
+    }
     func addExport(classID: Int32, value: JSClassInfo) {
         exportLock.lock()
         defer { exportLock.unlock() }
@@ -154,7 +189,7 @@ extension JSContext {
     
     func addActiveValue(value: JSRetainedValue) {
         if isShuttingDown {
-            JS_FreeValue(ref, value.value)
+            value.value.free(self)
             return
         }
         exportLock.lock()
@@ -174,7 +209,7 @@ extension JSContext {
             activeValues = activeValues.filter { export in
                 return export !== v
             }
-            JS_FreeValue(ref, v.value)
+            v.value.free(self)
         }
     }
 }

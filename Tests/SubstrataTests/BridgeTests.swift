@@ -18,6 +18,14 @@ final class BridgeTests: XCTestCase {
         // Put teardown code here. This method is called after the invocation of each test method in the class.
         EdgeFunctionJS.reset()
     }
+    
+    func testStressBridge() throws {
+        for _ in 0..<1000 {
+            try autoreleasepool {
+                try testBridge()
+            }
+        }
+    }
 
     func testBridge() throws {
         let engine = JSEngine()
