@@ -32,6 +32,10 @@ public class JSEngine {
         JS_FreeRuntime(runtime)
     }
     
+    public func shutdown() {
+        context.shutdown()
+    }
+    
     public func loadBundle(url: URL, completion: BundleLoaded? = nil) {
         var jsError: Bool = false
         
@@ -91,14 +95,14 @@ public class JSEngine {
         var result: Bool = false
     
         guard keyPath.count > 0 else { return result }
-        let value = (value as? JSInternalConvertible)?.toJSValue(context: context) ?? JSValue.undefined
-        
-        var components = keyPath.components(separatedBy: ".")
-        guard let last = components.last else { return result }
-        components.removeLast()
-        let path = components.joined(separator: ".")
-        
         context.performThreadSafe {
+            let value = (value as? JSInternalConvertible)?.toJSValue(context: context) ?? JSValue.undefined
+            
+            var components = keyPath.components(separatedBy: ".")
+            guard let last = components.last else { return }
+            components.removeLast()
+            let path = components.joined(separator: ".")
+            
             var pathValue: JSValue
             if path.count == 0 {
                 // they're referencing the global object...

@@ -90,6 +90,8 @@ final class BridgeTests: XCTestCase {
         engine.bridge["anInt"] = nil
         let intGone = engine.bridge["anInt"]
         XCTAssertNil(intGone)
+        
+        engine.shutdown()
     }
 
 

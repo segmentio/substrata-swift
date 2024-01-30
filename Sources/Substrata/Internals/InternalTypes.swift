@@ -22,10 +22,6 @@ extension JSInternalConvertible {
     public var debugDescription: String { return string }
 }
 
-internal protocol JSRetainedValue: AnyObject {
-    var value: JSValue { get }
-}
-
 internal class JSClassInfo {
     let name: String
     let type: JSExport.Type

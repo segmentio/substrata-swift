@@ -323,7 +323,7 @@ extension Array: JSConvertible, JSInternalConvertible where Element == JSConvert
 
 // MARK: - Javascript specific type conversions
 
-public class JSClass: JSRetainedValue, JSConvertible, JSInternalConvertible {
+public class JSClass: JSConvertible, JSInternalConvertible {
     internal let value: JSValue
     internal weak var context: JSContext?
     internal var methods: [String: JSFunction]? = nil
@@ -372,6 +372,9 @@ public class JSClass: JSRetainedValue, JSConvertible, JSInternalConvertible {
     }
     
     required internal init?(value: JSValue, context: JSContext) {
+        if context.isShuttingDown {
+            fatalError()
+        }
         if JS_IsObject(value) > 0 {
             let v = JS_DupValue(context.ref, value)
             self.className = value.getClassName(context)
@@ -459,7 +462,7 @@ public class JSClass: JSRetainedValue, JSConvertible, JSInternalConvertible {
     }
 }
 
-public class JSFunction: JSRetainedValue, JSConvertible, JSInternalConvertible {
+public class JSFunction: JSConvertible, JSInternalConvertible {
     internal let value: JSValue
     internal weak var context: JSContext?
     internal let name: String
@@ -475,7 +478,7 @@ public class JSFunction: JSRetainedValue, JSConvertible, JSInternalConvertible {
         // we can't pass things between contexts, so make sure
         // they match.
         if context === self.context {
-            return value
+            return JS_DupValue(context.ref, value)
         }
         return nil
     }
@@ -485,6 +488,9 @@ public class JSFunction: JSRetainedValue, JSConvertible, JSInternalConvertible {
     }
     
     required internal init?(value: JSValue, context: JSContext) {
+        if context.isShuttingDown {
+            fatalError()
+        }
         if JS_IsFunction(context.ref, value) > 0 {
             self.value = JS_DupValue(context.ref, value)
             self.context = context

@@ -26,7 +26,8 @@ internal class JSContext {
     internal var propertySetters = [Int32: JSPropertySetterDefinition]()
     internal var instances = [JSClassInstanceInfo]()
     internal var methodIDs = [Int32: String]()
-    internal var activeValues = [JSRetainedValue]()
+    internal var activeJSClasses = [JSClass]()
+    internal var activeJSFunctions = [JSFunction]()
     
     internal var builtIns: Builtins?
     internal let globalRef: JSValue
@@ -53,17 +54,73 @@ internal class JSContext {
         shuttingDown = true
         executionQueue.sync {
             ref.opaqueContext = nil
-        
-            for value in activeValues {
-                value.value.free(self)
+            
+            for value in activeJSClasses {
+                if JS_IsLiveObject(runtimeRef, value.value) > 0 {
+                    let refs = js_get_refcount(value.value)
+                    if refs > 1 {
+                        value.value.free(self)
+                    }
+                }
             }
-    
+            
+            for value in activeJSFunctions {
+                if JS_IsLiveObject(runtimeRef, value.value) > 0 {
+                    let refs = js_get_refcount(value.value)
+                    if refs > 1 {
+                        value.value.free(self)
+                    }
+                }
+            }
+            
             globalRef.free(self)
             
             JS_FreeContext(ref)
         }
     }
     
+    func addActiveValue(value: JSFunction) {
+        if isShuttingDown {
+            value.value.free(self)
+            return
+        }
+        exportLock.lock()
+        defer { exportLock.unlock() }
+        
+        activeJSFunctions.append(value)
+    }
+    
+    func addActiveValue(value: JSClass) {
+        if isShuttingDown {
+            value.value.free(self)
+            return
+        }
+        exportLock.lock()
+        defer { exportLock.unlock() }
+        
+        activeJSClasses.append(value)
+    }
+    
+    func freeActiveValue(value: JSFunction) {
+        if isShuttingDown { return }
+        
+        exportLock.lock()
+        defer { exportLock.unlock() }
+        activeJSFunctions.remove(value)
+        value.value.free(self)
+    }
+    
+    func freeActiveValue(value: JSClass) {
+        if isShuttingDown { return }
+        
+        exportLock.lock()
+        defer { exportLock.unlock() }
+        activeJSClasses.remove(value)
+        value.value.free(self)
+    }
+}
+
+extension JSContext {
     func newContextClassID() -> Int32 {
         exportLock.lock()
         defer { exportLock.unlock() }
@@ -185,32 +242,6 @@ extension JSContext {
         exportLock.lock()
         defer { exportLock.unlock() }
         return methodIDs[methodID]
-    }
-    
-    func addActiveValue(value: JSRetainedValue) {
-        if isShuttingDown {
-            value.value.free(self)
-            return
-        }
-        exportLock.lock()
-        defer { exportLock.unlock() }
-        activeValues.append(value)
-    }
-    
-    func freeActiveValue(value: JSRetainedValue) {
-        if isShuttingDown { return }
-        
-        exportLock.lock()
-        defer { exportLock.unlock() }
-        let found = activeValues.filter { export in
-            return export === value
-        }
-        if let v = found.first {
-            activeValues = activeValues.filter { export in
-                return export !== v
-            }
-            v.value.free(self)
-        }
     }
 }
 

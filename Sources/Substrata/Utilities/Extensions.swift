@@ -43,6 +43,26 @@ extension JSValue: Hashable {
     }
 }
 
+extension JSFunction: Hashable {
+    public static func == (lhs: JSFunction, rhs: JSFunction) -> Bool {
+        return lhs === rhs
+    }
+    
+    public func hash(into hasher: inout Hasher) {
+        self.value.u.ptr.hash(into: &hasher)
+    }
+}
+
+extension JSClass: Hashable {
+    public static func == (lhs: JSClass, rhs: JSClass) -> Bool {
+        return lhs === rhs
+    }
+    
+    public func hash(into hasher: inout Hasher) {
+        self.value.u.ptr.hash(into: &hasher)
+    }
+}
+
 extension JSValue {
     internal static var null: JSValue = {
         return JSValue(u: JSValueUnion(int32: Int32(JS_TAG_NULL)), tag: Int64(JS_TAG_NULL))
@@ -186,6 +206,14 @@ extension Array where Element == JSConvertible? {
         let result = self[index]
         if result is NSNull { return nil }
         return result
+    }
+}
+
+extension Array where Element: Equatable {
+    // Remove first collection element that is equal to the given `object`:
+    mutating func remove(_ object: Element) {
+        guard let index = firstIndex(of: object) else {return}
+        remove(at: index)
     }
 }
 

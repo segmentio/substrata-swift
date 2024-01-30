@@ -25,4 +25,16 @@
 JSValue js_create_from_ctor(JSContext *ctx, JSValueConst ctor, int class_id);
 void js_free_prop_enum(JSContext *ctx, JSPropertyEnum *tab, uint32_t len);
 
+static int32_t js_get_refcount(JSValue v) {
+    JSRefCountHeader *p = (JSRefCountHeader *)JS_VALUE_GET_PTR(v);
+    return p->ref_count;
+}
+
+static void js_decrement_refcount(JSValue v) {
+    JSRefCountHeader *p = (JSRefCountHeader *)JS_VALUE_GET_PTR(v);
+    if (p->ref_count > 0) {
+        p->ref_count--;
+    }
+}
+
 #endif // SEGMENT_H

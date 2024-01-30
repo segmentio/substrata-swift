@@ -1949,7 +1949,7 @@ void JS_FreeRuntime(JSRuntime *rt)
             printf("Secondary object leaks: %d\n", count);
     }
 #endif
-    //assert(list_empty(&rt->gc_obj_list));
+    assert(list_empty(&rt->gc_obj_list));
 
     /* free the classes */
     for(i = 0; i < rt->class_count; i++) {
@@ -5444,6 +5444,9 @@ void __JS_FreeValueRT(JSRuntime *rt, JSValue v)
     case JS_TAG_FUNCTION_BYTECODE:
         {
             JSGCObjectHeader *p = JS_VALUE_GET_PTR(v);
+            if (p->ref_count != 0) {
+                break;
+            }
             if (rt->gc_phase != JS_GC_PHASE_REMOVE_CYCLES) {
                 list_del(&p->link);
                 list_add(&p->link, &rt->gc_zero_ref_count_list);
