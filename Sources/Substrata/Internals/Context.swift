@@ -55,6 +55,12 @@ internal class JSContext {
         executionQueue.sync {
             ref.opaqueContext = nil
             
+            // this feels sketchy .. if we free things down to a refcount of 0
+            // it seems hit or miss whether quickjs will blow up or not.  keeping
+            // it to one takes care of things such that it can manage the last bits
+            // on it's own.  object ownership is a little murky, but we're gonna
+            // let quickjs win.
+            
             for value in activeJSClasses {
                 if JS_IsLiveObject(runtimeRef, value.value) > 0 {
                     let refs = js_get_refcount(value.value)
