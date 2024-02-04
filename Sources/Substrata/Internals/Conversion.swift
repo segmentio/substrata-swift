@@ -562,6 +562,7 @@ public class JSFunction: JSConvertible, JSInternalConvertible {
         return jsResult
     }
     
+    @discardableResult
     public func call(this: JSValue? = nil, args: [JSConvertible]?) -> JSConvertible? {
         guard let context else { return nil }
         var result: JSConvertible? = nil
