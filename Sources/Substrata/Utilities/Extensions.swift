@@ -271,3 +271,34 @@ extension Decimal {
         return _isNegative != 0 ? -d : d
     }
 }
+
+internal extension NSNumber {
+    static let trueValue = NSNumber(value: true)
+    static let trueObjCType = trueValue.objCType
+    static let falseValue = NSNumber(value: false)
+    static let falseObjCType = falseValue.objCType
+    
+    var type: CFNumberType {
+        return CFNumberGetType(self as CFNumber)
+    }
+    
+    func isBool() -> Bool {
+        let type = self.objCType
+        if (compare(NSNumber.trueValue) == .orderedSame && type == NSNumber.trueObjCType) ||
+           (compare(NSNumber.falseValue) == .orderedSame && type == NSNumber.falseObjCType) {
+            return true
+        }
+        return false
+    }
+    
+    func isDouble() -> Bool {
+        let type = self.type
+        switch type {
+        case .float32Type, .floatType, .float64Type, .doubleType:
+            return true
+        default:
+            return false
+        }
+    }
+}
+

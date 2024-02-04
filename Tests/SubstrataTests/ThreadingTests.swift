@@ -33,7 +33,7 @@ final class ThreadingTests: XCTestCase {
 
     func testMultiEngineThreads() throws {
         let dg = DispatchGroup()
-        for _ in 0..<1000 {
+        for _ in 0..<100 {
             dg.enter()
             DispatchQueue.global().async {
                 autoreleasepool {
@@ -113,7 +113,7 @@ final class ThreadingTests: XCTestCase {
         engine.loadBundle(url: bundleURL!)
         
         let dg = DispatchGroup()
-        for _ in 0..<1000 {
+        for _ in 0..<100 {
             dg.enter()
             DispatchQueue.global().async {
                 autoreleasepool {

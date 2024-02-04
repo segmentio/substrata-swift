@@ -127,12 +127,6 @@ open class JSExport {
     }
     
     // Overrides
-    
-    public required init() {
-        
-    }
-    
-    public func construct(args: [JSConvertible?]) {
-        
-    }
+    public required init() {}
+    open func construct(args: [JSConvertible?]) {}
 }

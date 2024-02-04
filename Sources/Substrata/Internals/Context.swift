@@ -12,8 +12,8 @@ internal class JSContext {
     internal var ref: JSContextRef
     internal var runtimeRef: JSRuntimeRef
     
-    private let exportLock = NSLock()
-    private let executionQueue = DispatchQueue(label: "com.segment.serial.javascript")
+    private let exportLock = Lock()
+    private let executionLock = RecursiveLock()
     
     private var classCounter: Int32 = 0
     private var functionCounter: Int32 = 0
@@ -34,6 +34,7 @@ internal class JSContext {
     internal var exceptionHandler: ((JSError) -> Void)?
     
     private var shuttingDown = false
+    private var executing = false
     
     init(runtime: JSRuntimeRef) {
         self.ref = JS_NewContext(runtime)
@@ -43,16 +44,17 @@ internal class JSContext {
     }
     
     var isShuttingDown: Bool {
-        exportLock.lock()
-        defer { exportLock.unlock() }
-        return shuttingDown
+        return exportLock.perform {
+            return shuttingDown
+        }
     }
     
     func shutdown() {
-        exportLock.lock()
-        defer { exportLock.unlock() }
-        shuttingDown = true
-        executionQueue.sync {
+        exportLock.perform {
+            shuttingDown = true
+        }
+        
+        executionLock.perform {
             ref.opaqueContext = nil
             
             // this feels sketchy .. if we free things down to a refcount of 0
@@ -90,10 +92,10 @@ internal class JSContext {
             value.value.free(self)
             return
         }
-        exportLock.lock()
-        defer { exportLock.unlock() }
         
-        activeJSFunctions.append(value)
+        exportLock.perform {
+            activeJSFunctions.append(value)
+        }
     }
     
     func addActiveValue(value: JSClass) {
@@ -101,70 +103,69 @@ internal class JSContext {
             value.value.free(self)
             return
         }
-        exportLock.lock()
-        defer { exportLock.unlock() }
-        
-        activeJSClasses.append(value)
+        exportLock.perform {
+            activeJSClasses.append(value)
+        }
     }
     
     func freeActiveValue(value: JSFunction) {
         if isShuttingDown { return }
         
-        exportLock.lock()
-        defer { exportLock.unlock() }
-        activeJSFunctions.remove(value)
-        value.value.free(self)
+        exportLock.perform {
+            activeJSFunctions.remove(value)
+            value.value.free(self)
+        }
     }
     
     func freeActiveValue(value: JSClass) {
         if isShuttingDown { return }
         
-        exportLock.lock()
-        defer { exportLock.unlock() }
-        activeJSClasses.remove(value)
-        value.value.free(self)
+        exportLock.perform {
+            activeJSClasses.remove(value)
+            value.value.free(self)
+        }
     }
 }
 
 extension JSContext {
     func newContextClassID() -> Int32 {
-        exportLock.lock()
-        defer { exportLock.unlock() }
-        let new = classCounter
-        classCounter += 1
-        return new
+        return exportLock.perform {
+            let new = classCounter
+            classCounter += 1
+            return new
+        }
     }
     
     func newContextFunctionID() -> Int32 {
-        exportLock.lock()
-        defer { exportLock.unlock() }
-        let new = functionCounter
-        functionCounter += 1
-        return new
+        return exportLock.perform {
+            let new = functionCounter
+            functionCounter += 1
+            return new
+        }
     }
     
     func newMethodID() -> Int32 {
-        exportLock.lock()
-        defer { exportLock.unlock() }
-        let new = methodCounter
-        methodCounter += 1
-        return new
+        return exportLock.perform {
+            let new = methodCounter
+            methodCounter += 1
+            return new
+        }
     }
     
     func newPropertyID() -> Int32 {
-        exportLock.lock()
-        defer { exportLock.unlock() }
-        let new = propertyCounter
-        propertyCounter += 1
-        return new
+        return exportLock.perform {
+            let new = propertyCounter
+            propertyCounter += 1
+            return new
+        }
     }
 }
 
 extension JSContext {
     func performThreadSafe(closure: () -> Void) {
         if !isShuttingDown {
-            executionQueue.sync {
-                closure()
+            return executionLock.perform {
+                return closure()
             }
         }
     }
@@ -172,82 +173,82 @@ extension JSContext {
 
 extension JSContext {
     func addExport(functionID: Int32, value: @escaping JSFunctionDefinition) {
-        exportLock.lock()
-        defer { exportLock.unlock() }
-        if functions[functionID] != nil { return }
-        functions[functionID] = value
+        exportLock.perform {
+            if functions[functionID] != nil { return }
+            functions[functionID] = value
+        }
     }
     
     func findExport(functionID: Int32) -> JSFunctionDefinition? {
-        exportLock.lock()
-        defer { exportLock.unlock() }
-        return functions[functionID]
+        return exportLock.perform {
+            return functions[functionID]
+        }
     }
     
     func addExport(propertyID: Int32, value: @escaping JSPropertyGetterDefinition) {
-        exportLock.lock()
-        defer { exportLock.unlock() }
-        if propertyGetters[propertyID] != nil { return }
-        propertyGetters[propertyID] = value
+        exportLock.perform {
+            if propertyGetters[propertyID] != nil { return }
+            propertyGetters[propertyID] = value
+        }
     }
     
     func findExport(propertyID: Int32) -> JSPropertyGetterDefinition? {
-        exportLock.lock()
-        defer { exportLock.unlock() }
-        return propertyGetters[propertyID]
+        return exportLock.perform {
+            return propertyGetters[propertyID]
+        }
     }
     
     func addExport(propertyID: Int32, value: @escaping JSPropertySetterDefinition) {
-        exportLock.lock()
-        defer { exportLock.unlock() }
-        if propertySetters[propertyID] != nil { return }
-        propertySetters[propertyID] = value
+        exportLock.perform {
+            if propertySetters[propertyID] != nil { return }
+            propertySetters[propertyID] = value
+        }
     }
     
     func findExport(propertyID: Int32) -> JSPropertySetterDefinition? {
-        exportLock.lock()
-        defer { exportLock.unlock() }
-        return propertySetters[propertyID]
+        return exportLock.perform {
+            return propertySetters[propertyID]
+        }
     }
     func addExport(classID: Int32, value: JSClassInfo) {
-        exportLock.lock()
-        defer { exportLock.unlock() }
-        if classes[classID] != nil { return }
-        classes[classID] = value
+        exportLock.perform {
+            if classes[classID] != nil { return }
+            classes[classID] = value
+        }
     }
     
     func findExport(classID: Int32) -> JSClassInfo? {
-        exportLock.lock()
-        defer { exportLock.unlock() }
-        return classes[classID]
+        return exportLock.perform {
+            return classes[classID]
+        }
     }
     
     func findExport(classType: JSExport.Type) -> JSClassInfo? {
-        exportLock.lock()
-        defer { exportLock.unlock() }
-        // there's enough guards elsewhere to make sure there's only one match.
-        let found = classes.filter { key, classInfo in
-            return classInfo.type == classType
+        return exportLock.perform {
+            // there's enough guards elsewhere to make sure there's only one match.
+            let found = classes.filter { key, classInfo in
+                return classInfo.type == classType
+            }
+            return found.first?.value
         }
-        return found.first?.value
     }
     
     func addExport(instance: JSClassInstanceInfo) {
-        exportLock.lock()
-        defer { exportLock.unlock() }
-        instances.append(instance)
+        exportLock.perform {
+            instances.append(instance)
+        }
     }
     
     func addExport(methodID: Int32, name: String) {
-        exportLock.lock()
-        defer { exportLock.unlock() }
-        methodIDs[methodID] = name
+        exportLock.perform {
+            methodIDs[methodID] = name
+        }
     }
     
     func findExport(methodID: Int32) -> String? {
-        exportLock.lock()
-        defer { exportLock.unlock() }
-        return methodIDs[methodID]
+        return exportLock.perform {
+            return methodIDs[methodID]
+        }
     }
 }
 

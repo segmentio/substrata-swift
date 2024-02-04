@@ -126,6 +126,35 @@ extension NSNull: JSConvertible, JSInternalConvertible {
     }
 }
 
+extension NSNumber: JSConvertible, JSInternalConvertible {
+    static func fromJSValue(_ value: JSValue, context: JSContext) -> Self? {
+        // we're not gonna get a NSNumber back from JS.
+        return nil
+    }
+    
+    func toJSValue(context: JSContext) -> JSValue? {
+        if isBool() {
+            return self.boolValue.toJSValue(context: context)
+        } else if isDouble() {
+            return self.doubleValue.toJSValue(context: context)
+        } else {
+            return self.intValue.toJSValue(context: context)
+        }
+    }
+    
+    var string: String {
+        if isBool() {
+            return self.boolValue.string
+        } else if isDouble() {
+            return self.doubleValue.string
+        } else {
+            return self.intValue.string
+        }
+    }
+    
+    
+}
+
 extension Double: JSConvertible, JSInternalConvertible {
     internal static func fromJSValue(_ value: JSValue, context: JSContext) -> Double? {
         if JS_IsNumber(value) > 0 {
@@ -424,6 +453,7 @@ public class JSClass: JSConvertible, JSInternalConvertible {
         }
     }
     
+    @discardableResult
     public func call(method: String, args: [JSConvertible]?) -> JSConvertible? {
         populateMethodsIfNecessary()
         // call the method if we have it
