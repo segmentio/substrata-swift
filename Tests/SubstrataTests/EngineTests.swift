@@ -145,7 +145,7 @@ class EngineTests: XCTestCase {
         let r = engine.object(key: "a")
         XCTAssertTrue(r is AnalyticsJS)
         
-        let o = engine.object(key: "a")?.typed(JSObject.self)
+        let o = engine.object(key: "a")?.typed(AnalyticsJS.self)
         XCTAssertNotNil(o)
         
         let result = engine.evaluate(script: "var annie = new Analytics('9876'); annie.track('booya');")
