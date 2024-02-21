@@ -297,6 +297,12 @@ public class JSEngine {
             }
         }
     }
+    
+    public func perform(closure: () -> Void) {
+        context.performThreadSafe {
+            closure()
+        }
+    }
 }
 
 extension JSEngine {
