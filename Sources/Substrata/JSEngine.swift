@@ -47,7 +47,7 @@ public class JSEngine: JavascriptEngine {
     public let context: JSContext = JSContext()
     
     private var jsErrorHandler: JavascriptErrorHandler? = nil
-    private let jsQueue = ReentrantQueue(label: "com.segment.serial.javascript", key: "js")
+    private let jsQueue = RecursiveLock()
     
     /**
      Access the data bridge
@@ -123,7 +123,7 @@ public class JSEngine: JavascriptEngine {
         }
             
         if let jsSource = jsSource {
-            _ = jsQueue.reentrantSync { [weak self] in
+            _ = jsQueue.perform { [weak self] in
                 self?.context.evaluate(script: jsSource)
             }
         }
@@ -146,7 +146,7 @@ public class JSEngine: JavascriptEngine {
     public func object(key: String) -> JSConvertible? {
         var result: JSConvertible? = nil
         
-        jsQueue.reentrantSync { [weak self] in
+        jsQueue.perform { [weak self] in
             guard let self = self else { return }
             result = self.context[key].value
         }
@@ -166,7 +166,7 @@ public class JSEngine: JavascriptEngine {
      ```
      */
     public func setObject(key: String, value: JSConvertible) {
-        jsQueue.reentrantSync { [weak self] in
+        jsQueue.perform { [weak self] in
             guard let self = self else { return }
             let v = value.jsValue(context: self.context)
             self.context[key] = v
@@ -212,7 +212,7 @@ public class JSEngine: JavascriptEngine {
      ```
      */
     public func expose(name: String, classType: JavascriptClass.Type) throws {
-        try jsQueue.reentrantSync { [weak self] in
+        try jsQueue.perform { [weak self] in
             guard let self = self else { return }
             let obj = try JSObject(context: self.context, type: classType)
             self.context[name] = obj
@@ -239,7 +239,7 @@ public class JSEngine: JavascriptEngine {
      ```
      */
     public func expose(name: String, function: @escaping JavascriptFunction) {
-        jsQueue.reentrantSync { [weak self] in
+        jsQueue.perform { [weak self] in
             guard let self = self else { return }
             let fn = JSFunction(context: self.context) { [weak self] (context, this, params) in
                 let convertedParams = params.map { $0.value }
@@ -267,7 +267,7 @@ public class JSEngine: JavascriptEngine {
      ```
      */
     public func extend(name: String, object: String, function: @escaping JavascriptFunction) throws {
-        try jsQueue.reentrantSync { [weak self] in
+        try jsQueue.perform { [weak self] in
             guard let self = self else { return }
             if let target = context[object] as? JSObject {
                 let fn = JSFunction(context: self.context) { context, this, params in
@@ -301,7 +301,7 @@ public class JSEngine: JavascriptEngine {
     @discardableResult
     public func call(functionName: String, params: JSConvertible?...) -> JSConvertible? {
         var result: JSConvertible? = nil
-        jsQueue.reentrantSync { [weak self] in
+        jsQueue.perform { [weak self] in
             guard let self = self else { return }
             // let JS do the name resolution for us
             if let f = self.context.evaluate(script: functionName).typed(JSFunction.self) {
@@ -328,7 +328,7 @@ public class JSEngine: JavascriptEngine {
     @discardableResult
     public func evaluate(script: String) -> JSConvertible? {
         var result: JSPrimitive? = nil
-        jsQueue.reentrantSync { [weak self] in
+        jsQueue.perform { [weak self] in
             guard let self = self else { return }
             result = self.context.evaluate(script: script);
         }
@@ -352,7 +352,7 @@ extension JSEngine {
     }
     
     private func setupExceptionHandler() {
-        jsQueue.reentrantSync { [weak self] in
+        jsQueue.perform { [weak self] in
             guard let self = self else { return }
             // setup javascript exception handling
             self.context.exceptionHandler = { [weak self] (context, value) in
@@ -365,7 +365,7 @@ extension JSEngine {
     
     private func setupDataBridge() {
         bridge = JSDataBridge(engine: self)
-        jsQueue.reentrantSync { [weak self] in
+        jsQueue.perform { [weak self] in
             // setup data bridge
             guard let self = self else { return }
             self.context.evaluate(script: "var \(JSDataBridge.dataBridgeKey) = {};")
@@ -377,7 +377,7 @@ extension JSEngine {
     @discardableResult
     public func syncRunEngine(closure: () -> JSConvertible?) -> JSConvertible? {
         var result: JSConvertible? = nil
-        jsQueue.reentrantSync {
+        jsQueue.perform {
             result = closure()
         }
         return result
