@@ -1,6 +1,26 @@
 import XCTest
 @testable import Substrata
 
+class MyTraits: JSExport, JSConvertible {
+    var description: String = "MyTraits"
+    
+    var debugDescription: String = "MyTraits"
+    
+    var a: Int = 23
+    
+    required init() {
+        super.init()
+        
+        exportProperty(named: "a") {
+            return self.a
+        } setter: { arg in
+            if let value = arg?.typed(as: Int.self) {
+                self.a = value
+            }
+        }
+    }
+}
+
 class MyJSClass: JSExport, JSStatic {
     var myInt: Int = 0
     
@@ -9,6 +29,8 @@ class MyJSClass: JSExport, JSStatic {
     
     var myInstanceProperty = 84
     var myInstanceReadonlyProperty = "goodbye"
+    var traits = [String: JSConvertible]()
+    var traits2 = MyTraits()
     
     static func staticInit() {
         exportMethod(named: "someStatic", function: someStatic)
@@ -41,6 +63,22 @@ class MyJSClass: JSExport, JSStatic {
         }, setter: { arg in
             if let value = arg?.typed(as: Int.self) {
                 self.myInstanceProperty = value
+            }
+        })
+        
+        exportProperty(named: "traits", getter: {
+            return self.traits
+        }, setter: { arg in
+            if let value = arg?.typed(as: [String: JSConvertible].self) {
+                self.traits = value
+            }
+        })
+        
+        exportProperty(named: "traits2", getter: {
+            return self.traits2
+        }, setter: { arg in
+            if let value = arg?.typed(as: MyTraits.self) {
+                self.traits2 = value
             }
         })
         
@@ -199,5 +237,44 @@ final class SubstrataTests: XCTestCase {
         XCTAssertEqual(c, "goodbye")
         engine.evaluate(script: "myJSClass.myInstanceReadonlyProperty = 'hello'")
         let d = engine.evaluate(script: "myJSClass.myInstanceReadonlyProperty")?.typed(as: String.self)
-        XCTAssertEqual(d, "goodbye")    }
+        XCTAssertEqual(d, "goodbye")
+    }
+    
+    func testSetBogusPropertySet() {
+        let engine = JSEngine()
+        engine.export(type: MyTraits.self, className: "MyTraits")
+        engine.export(type: MyJSClass.self, className: "MyJSClass")
+        engine.evaluate(script: "let myJSClass = new MyJSClass()")
+        
+        let shouldntCrash1 = engine.evaluate(script: "myJSClass.myInstanceProperty.a = 7")?.typed(as: Int.self)
+        XCTAssertEqual(shouldntCrash1, 7)
+        
+        let shouldntCrash2 = engine.evaluate(script: "myJSClass.myInstanceProperty.a")?.typed(as: Int.self)
+        XCTAssertEqual(shouldntCrash2, nil)
+        
+        let traits = engine.evaluate(script: "myJSClass.traits")?.typed(as: [String: JSConvertible].self)
+        XCTAssertNotNil(traits)
+        
+        // setting a native value like this shouldn't work
+        engine.evaluate(script: "myJSClass.traits.a = 'hello'")
+        var traits2 = engine.evaluate(script: "myJSClass.traits")?.typed(as: [String: JSConvertible].self)
+        XCTAssertNotNil(traits2)
+        var a = traits2?["a"]
+        XCTAssertNil(a)
+        
+        // setting it like this SHOULD work
+        engine.evaluate(script: "myJSClass.traits = {a: 'hello'}")
+        traits2 = engine.evaluate(script: "myJSClass.traits")?.typed(as: [String: JSConvertible].self)
+        XCTAssertNotNil(traits2)
+        let newA = traits2?["a"] as? String
+        XCTAssertEqual(newA, "hello")
+        
+        var otherTraits = engine.evaluate(script: "myJSClass.traits2")?.typed(as: MyTraits.self)
+        engine.evaluate(script: "myJSClass.traits2.a = 32")
+        otherTraits = engine.evaluate(script: "myJSClass.traits2")?.typed(as: MyTraits.self)
+        XCTAssertNotNil(otherTraits)
+        let otherA = otherTraits?.a
+        XCTAssertNil(otherA)
+
+    }
 }
