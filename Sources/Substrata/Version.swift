@@ -1,8 +1,17 @@
 //
-//  File.swift
-//  
+//  Version.swift
+//  Substrata
 //
-//  Created by Brandon Sneed on 5/17/24.
+//  Created by Brandon Sneed on 05/04/22.
 //
 
-import Foundation
+// DO NOT MODIFY THIS FILE BY HAND!!
+// DO NOT MODIFY THIS FILE BY HAND!!
+// DO NOT MODIFY THIS FILE BY HAND!!
+// DO NOT MODIFY THIS FILE BY HAND!!
+
+// Use release.sh's automation.
+
+// BREAKING.FEATURE.FIX
+
+internal let __substrata_version = "0.0.2"
