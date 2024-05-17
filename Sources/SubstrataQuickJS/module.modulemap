@@ -1,0 +1,4 @@
+module QuickJS [extern_c] {
+    umbrella header "include/substrata_umbrella.h"
+    export *
+}
