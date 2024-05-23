@@ -127,7 +127,7 @@ public class JSEngine {
             #if DEBUG
             fatalError("Substrata Error: Something named `\(name)` already exists!")
             #else
-            return // if not in debug, just leave.
+            return nil // if not in debug, just leave.
             #endif
         }
         
