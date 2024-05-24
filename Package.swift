@@ -15,6 +15,9 @@ let package = Package(
         .library(
             name: "Substrata",
             targets: ["Substrata"]),
+        .library(
+            name: "SubstrataQuickJS",
+            targets: ["SubstrataQuickJS"]),
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
