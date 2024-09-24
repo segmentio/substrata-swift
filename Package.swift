@@ -23,16 +23,16 @@ let package = Package(
         // Targets are the basic building blocks of a package, defining a module or a test suite.
         // Targets can depend on other targets in this package and products from dependencies.
         .target(
-            name: "SubstrataQuickJS"
-            /*cSettings: [
-                /*.unsafeFlags([
+            name: "SubstrataQuickJS",
+            cSettings: [
+                .unsafeFlags([
                     "-Wno-implicit-int-float-conversion",
                     "-Wno-conversion"
-                ]),*/
-                .define("CONFIG_BIGNUM"),
-                .define("CONFIG_ATOMICS"),
+                ]),
+                //.define("CONFIG_BIGNUM"),
+                //.define("CONFIG_ATOMICS"),
                 //.define("DUMP_LEAKS")
-            ]*/
+            ]
         ),
         .target(
             name: "Substrata", 

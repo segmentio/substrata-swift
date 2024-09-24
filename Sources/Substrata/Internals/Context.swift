@@ -55,6 +55,12 @@ internal class JSContext {
         }
         
         executionLock.perform {
+            /*for value in activeJSClasses {
+                if let instance = typedInstance(context: ref, this: value.value) {
+                    instance.shutdown()
+                }
+            }*/
+            
             ref.opaqueContext = nil
             
             // this feels sketchy .. if we free things down to a refcount of 0
@@ -64,12 +70,16 @@ internal class JSContext {
             // let quickjs win.
             
             for value in activeJSClasses {
+                if let instance = typedInstance(context: ref, this: value.value) {
+                    instance.shutdown()
+                }
                 if JS_IsLiveObject(runtimeRef, value.value) > 0 {
                     let refs = js_get_refcount(value.value)
                     if refs > 1 {
                         value.value.free(self)
                     }
                 }
+                
             }
             
             for value in activeJSFunctions {

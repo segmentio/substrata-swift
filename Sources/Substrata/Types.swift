@@ -8,7 +8,9 @@
 import Foundation
 import SubstrataQuickJS
 
-public protocol JSConvertible: CustomStringConvertible, CustomDebugStringConvertible { }
+public protocol JSConvertible {
+    func jsDescription() -> String
+}
 
 extension JSConvertible {
     public func typed<T: JSConvertible>() -> T? {
@@ -89,6 +91,7 @@ open class JSExport {
     }
     
     // Instance stuff
+    internal var jsInstance: JSValue?
     
     private var _exportedMethods = [String: JSFunctionDefinition]()
     internal var exportedMethods: [String: JSFunctionDefinition] {
@@ -129,4 +132,5 @@ open class JSExport {
     // Overrides
     public required init() {}
     open func construct(args: [JSConvertible?]) {}
+    open func shutdown() {}
 }

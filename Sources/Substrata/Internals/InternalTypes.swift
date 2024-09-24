@@ -11,15 +11,23 @@ import SubstrataQuickJS
 internal typealias JSRuntimeRef = OpaquePointer
 internal typealias JSContextRef = OpaquePointer
 
-internal protocol JSInternalConvertible: CustomStringConvertible, CustomDebugStringConvertible {
+internal protocol JSInternalConvertible {
     static func fromJSValue(_ value: JSValue, context: JSContext) -> Self?
     func toJSValue(context: JSContext) -> JSValue?
     var string: String { get }
+    func jsDescription() -> String
+}
+
+extension JSInternalConvertible {
+    
 }
 
 extension JSInternalConvertible {
     public var description: String { return string }
     public var debugDescription: String { return string }
+    public func jsDescription() -> String {
+        return string
+    }
 }
 
 internal class JSClassInfo {

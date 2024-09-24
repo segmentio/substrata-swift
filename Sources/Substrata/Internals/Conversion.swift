@@ -28,7 +28,15 @@ internal func returnJSValueRef(context: JSContext, function: JSPropertyGetterDef
     // nil = undefined in js.
     // nsnull = null in js.
     var result = JSValue.undefined
-    let v = function() as? JSInternalConvertible
+    let f = function()
+    
+    /*// short circuit if it's an actual exported class attached to an exported class.
+    if let instance = (f as? JSExport)?.jsInstance {
+        result = instance
+        return result
+    }*/
+    
+    let v = f as? JSInternalConvertible
     if let v = v?.toJSValue(context: context) {
         result = v
     }
@@ -80,7 +88,7 @@ extension String: JSConvertible, JSInternalConvertible {
         return JS_NewString(context.ref, self)
     }
     
-    internal var string: String {
+    public var string: String {
         return "\(self)"
     }
 }
@@ -99,7 +107,7 @@ extension Bool: JSConvertible, JSInternalConvertible {
         return JS_NewBool(context.ref, b)
     }
     
-    internal var string: String {
+    public var string: String {
         switch self {
         case true:
             return "true"
@@ -121,7 +129,7 @@ extension NSNull: JSConvertible, JSInternalConvertible {
         return JSValue.null
     }
     
-    internal var string: String {
+    public var string: String {
         return "null"
     }
 }
@@ -142,7 +150,7 @@ extension NSNumber: JSConvertible, JSInternalConvertible {
         }
     }
     
-    var string: String {
+    public var string: String {
         if isBool() {
             return self.boolValue.string
         } else if isDouble() {
@@ -170,7 +178,7 @@ extension Double: JSConvertible, JSInternalConvertible {
         return v
     }
     
-    internal var string: String {
+    public var string: String {
         return "\(self)"
     }
 }
@@ -190,7 +198,7 @@ extension Float: JSConvertible, JSInternalConvertible {
         return v
     }
     
-    internal var string: String {
+    public var string: String {
         return "\(self)"
     }
 }
@@ -210,7 +218,7 @@ extension Int: JSConvertible, JSInternalConvertible {
         return v
     }
     
-    internal var string: String {
+    public var string: String {
         return "\(self)"
     }
 }
@@ -230,7 +238,7 @@ extension UInt: JSConvertible, JSInternalConvertible {
         return v
     }
     
-    internal var string: String {
+    public var string: String {
         return "\(self)"
     }
 }
@@ -250,7 +258,7 @@ extension Decimal: JSConvertible, JSInternalConvertible {
         return v
     }
     
-    internal var string: String {
+    public var string: String {
         return "\(self)"
     }
 }
@@ -335,7 +343,7 @@ extension Array: JSConvertible, JSInternalConvertible where Element == JSConvert
         return array
     }
     
-    internal var string: String {
+    public var string: String {
         let stringArray = self.map { String(humanized: ($0 as? JSInternalConvertible)?.string) }
         let result = stringArray.joined(separator: ", ")
         return "[\(result)]"
@@ -374,7 +382,7 @@ public class JSClass: JSConvertible, JSInternalConvertible {
         return nil
     }
     
-    internal var string: String {
+    public var string: String {
         if let methods {
             var protoList = methods.keys.map { name in
                 return "    \(name): ƒ \(name)()"
@@ -513,7 +521,7 @@ public class JSFunction: JSConvertible, JSInternalConvertible {
         return nil
     }
     
-    internal var string: String {
+    public var string: String {
         return "ƒ \(name)()"
     }
     
@@ -620,7 +628,7 @@ public final class JSError: JSConvertible, JSInternalConvertible {
         return nil
     }
     
-    internal var string: String {
+    public var string: String {
         return """
         Javascript Error:
           Error: \(name ?? "unknown"), \(message ?? "unknown")
@@ -646,7 +654,7 @@ public final class JSError: JSConvertible, JSInternalConvertible {
         let v = JS_GetPropertyStr(context.ref, object, name)
         let value = v.toJSConvertible(context: context)
         v.free(context)
-        return value?.description
+        return value?.jsDescription()
     }
     
     public var description: String {

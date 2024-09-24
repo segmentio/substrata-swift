@@ -62,6 +62,9 @@ internal func typedConstruct(context: JSContextRef?, this: JSValue, magic: Int32
         instance.construct(args: args)
     }
     
+    // set the instance so we can pull it if asked.
+    instance.jsInstance = result
+    
     context.addExport(instance: classInstance)
     
     // set up our instance properties ...
@@ -125,6 +128,23 @@ func typedInstanceMethod(context: JSContextRef?, this: JSValue, argc: Int32, arg
     let result = returnJSValueRef(context: context, function: method, args: args)
     
     return result
+}
+
+func typedInstance(context: JSContextRef?, this: JSValue) -> JSExport? {
+    guard let context = context?.opaqueContext else { return nil }
+    
+    // get the classID for `this`.
+    let instanceAtom = JS_NewAtom(context.ref, "__instanceAtom")
+    let classIDValue = JS_GetProperty(context.ref, this, instanceAtom)
+    var classID: Int32 = 0
+    JS_ToInt32(context.ref, &classID, classIDValue)
+    JS_FreeAtom(context.ref, instanceAtom)
+    
+    // get the instance information
+    let ptr = JS_GetOpaque(this, JSClassID(classID))
+    guard let info = ptr?.assumingMemoryBound(to: JSClassInstanceInfo.self) else { return nil }
+    guard let instance = info.pointee.instance else { return nil }
+    return instance
 }
 
 
