@@ -8,7 +8,9 @@
 import Foundation
 import SubstrataQuickJS
 
-public protocol JSConvertible: CustomStringConvertible, CustomDebugStringConvertible { }
+public protocol JSConvertible {
+    func jsDescription() -> String
+}
 
 extension JSConvertible {
     public func typed<T: JSConvertible>() -> T? {

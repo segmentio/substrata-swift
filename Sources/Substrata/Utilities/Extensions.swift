@@ -33,7 +33,7 @@ extension JSAtom {
     }
 }
 
-extension JSValue: Hashable {
+extension SubstrataQuickJS.JSValue: Swift.Hashable {
     public static func == (lhs: JSValue, rhs: JSValue) -> Bool {
         return lhs.u.ptr == rhs.u.ptr
     }
