@@ -55,11 +55,11 @@ internal class JSContext {
         }
         
         executionLock.perform {
-            /*for value in activeJSClasses {
+            for value in activeJSClasses {
                 if let instance = typedInstance(context: ref, this: value.value) {
                     instance.shutdown()
                 }
-            }*/
+            }
             
             ref.opaqueContext = nil
             
@@ -70,9 +70,9 @@ internal class JSContext {
             // let quickjs win.
             
             for value in activeJSClasses {
-                if let instance = typedInstance(context: ref, this: value.value) {
+                /*if let instance = typedInstance(context: ref, this: value.value) {
                     instance.shutdown()
-                }
+                }*/
                 if JS_IsLiveObject(runtimeRef, value.value) > 0 {
                     let refs = js_get_refcount(value.value)
                     if refs > 1 {
@@ -94,6 +94,9 @@ internal class JSContext {
             globalRef.free(self)
             
             JS_FreeContext(ref)
+            
+            activeJSClasses.removeAll()
+            activeJSFunctions.removeAll()
         }
     }
     
