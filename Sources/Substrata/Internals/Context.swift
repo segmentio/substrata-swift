@@ -84,6 +84,18 @@ internal class JSContext {
             globalRef.free(self)
             
             JS_FreeContext(ref)
+            
+            // make sure everything gets dropped;
+            // we have a completely non-functional js engine now,
+            // and can't have any leaks happening from object tracking.
+            activeJSClasses.removeAll()
+            activeJSFunctions.removeAll()
+            classes.removeAll()
+            functions.removeAll()
+            propertyGetters.removeAll()
+            propertySetters.removeAll()
+            instances.removeAll()
+            methodIDs.removeAll()
         }
     }
     

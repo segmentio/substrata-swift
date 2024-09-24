@@ -84,7 +84,7 @@ class EdgeFunctionJS: JSExport, JSStatic {
 
 func myFunction(args: [JSConvertible?]) -> JSConvertible? {
     print("myFunction called")
-    print("myFunction arg0 = \(String(humanized: args.index(0)?.description))")
+    print("myFunction arg0 = \(String(humanized: args.index(0)?.jsDescription()))")
     return true
 }
 

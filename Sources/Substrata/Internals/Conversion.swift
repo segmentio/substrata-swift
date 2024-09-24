@@ -80,12 +80,12 @@ extension String: JSConvertible, JSInternalConvertible {
         return JS_NewString(context.ref, self)
     }
     
-    internal var string: String {
+    public var string: String {
         return "\(self)"
     }
 }
 
-extension Bool: JSConvertible, JSInternalConvertible {
+extension Swift.Bool: JSConvertible, JSInternalConvertible {
     internal static func fromJSValue(_ value: JSValue, context: JSContext) -> Bool? {
         if JS_IsBool(value) > 0 {
             let b = JS_ToBool(context.ref, value) == 1
@@ -99,7 +99,7 @@ extension Bool: JSConvertible, JSInternalConvertible {
         return JS_NewBool(context.ref, b)
     }
     
-    internal var string: String {
+    public var string: String {
         switch self {
         case true:
             return "true"
@@ -121,7 +121,7 @@ extension NSNull: JSConvertible, JSInternalConvertible {
         return JSValue.null
     }
     
-    internal var string: String {
+    public var string: String {
         return "null"
     }
 }
@@ -170,7 +170,7 @@ extension Double: JSConvertible, JSInternalConvertible {
         return v
     }
     
-    internal var string: String {
+    public var string: String {
         return "\(self)"
     }
 }
@@ -190,7 +190,7 @@ extension Float: JSConvertible, JSInternalConvertible {
         return v
     }
     
-    internal var string: String {
+    public var string: String {
         return "\(self)"
     }
 }
@@ -210,7 +210,7 @@ extension Int: JSConvertible, JSInternalConvertible {
         return v
     }
     
-    internal var string: String {
+    public var string: String {
         return "\(self)"
     }
 }
@@ -230,7 +230,7 @@ extension UInt: JSConvertible, JSInternalConvertible {
         return v
     }
     
-    internal var string: String {
+    public var string: String {
         return "\(self)"
     }
 }
@@ -250,7 +250,7 @@ extension Decimal: JSConvertible, JSInternalConvertible {
         return v
     }
     
-    internal var string: String {
+    public var string: String {
         return "\(self)"
     }
 }
@@ -335,7 +335,7 @@ extension Array: JSConvertible, JSInternalConvertible where Element == JSConvert
         return array
     }
     
-    internal var string: String {
+    public var string: String {
         let stringArray = self.map { String(humanized: ($0 as? JSInternalConvertible)?.string) }
         let result = stringArray.joined(separator: ", ")
         return "[\(result)]"
@@ -374,7 +374,7 @@ public class JSClass: JSConvertible, JSInternalConvertible {
         return nil
     }
     
-    internal var string: String {
+    public var string: String {
         if let methods {
             var protoList = methods.keys.map { name in
                 return "    \(name): ƒ \(name)()"
@@ -513,7 +513,7 @@ public class JSFunction: JSConvertible, JSInternalConvertible {
         return nil
     }
     
-    internal var string: String {
+    public var string: String {
         return "ƒ \(name)()"
     }
     
@@ -620,7 +620,7 @@ public final class JSError: JSConvertible, JSInternalConvertible {
         return nil
     }
     
-    internal var string: String {
+    public var string: String {
         return """
         Javascript Error:
           Error: \(name ?? "unknown"), \(message ?? "unknown")
@@ -646,7 +646,7 @@ public final class JSError: JSConvertible, JSInternalConvertible {
         let v = JS_GetPropertyStr(context.ref, object, name)
         let value = v.toJSConvertible(context: context)
         v.free(context)
-        return value?.description
+        return value?.jsDescription()
     }
     
     public var description: String {
