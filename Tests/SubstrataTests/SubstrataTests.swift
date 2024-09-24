@@ -271,7 +271,7 @@ final class SubstrataTests: XCTestCase {
         let newA = traits2?["a"] as? String
         XCTAssertEqual(newA, "hello")
         
-        // this doesn't work; and probably never will. :(
+        // this doesn't work; it's not super important so i'll come back to it later. :(
         /*var otherTraits = engine.evaluate(script: "myJSClass.traits2")?.typed(as: MyTraits.self)
         engine.evaluate(script: "myJSClass.traits2.a = 32")
         otherTraits = engine.evaluate(script: "myJSClass.traits2")?.typed(as: MyTraits.self)
