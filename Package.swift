@@ -25,10 +25,10 @@ let package = Package(
         .target(
             name: "SubstrataQuickJS",
             cSettings: [
-                .unsafeFlags([
+                /*.unsafeFlags([
                     "-Wno-implicit-int-float-conversion",
                     "-Wno-conversion"
-                ]),
+                ]),*/
                 //.define("CONFIG_BIGNUM"),
                 //.define("CONFIG_ATOMICS"),
                 //.define("DUMP_LEAKS")
