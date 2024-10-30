@@ -105,8 +105,6 @@ internal func typedConstruct(context: JSContextRef?, this: JSValue, magic: Int32
 func typedInstanceMethod(context: JSContextRef?, this: JSValue, argc: Int32, argv: UnsafeMutablePointer<JSValue>?, magic: Int32) -> JSValue {
     guard let context = context?.opaqueContext else { return JSValue.undefined }
     guard let methodName = context.findExport(methodID: magic) else { return JSValue.undefined }
-            
-    print("instance_method2 calling `\(methodName)`.")
     
     // get the classID for `this`.
     let instanceAtom = JS_NewAtom(context.ref, "__instanceAtom")
