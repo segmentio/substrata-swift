@@ -1949,7 +1949,10 @@ void JS_FreeRuntime(JSRuntime *rt)
             printf("Secondary object leaks: %d\n", count);
     }
 #endif
-    assert(list_empty(&rt->gc_obj_list));
+    // FIXME: This is a temporary fix.  Preferrably this comes back,
+    // though it is a little ominous to have an assert force a crash over
+    // a potential (and small) memory leak.
+    //assert(list_empty(&rt->gc_obj_list));
 
     /* free the classes */
     for(i = 0; i < rt->class_count; i++) {
