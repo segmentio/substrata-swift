@@ -64,6 +64,6 @@ jobs:
     steps:
       - uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: "15.2"
+          xcode-version: "16.2"
       - uses: actions/checkout@v2
       - run: xcodebuild -scheme Substrata-Package test -sdk appletvsimulator -destination 'platform=tvOS Simulator,name=Apple TV'
