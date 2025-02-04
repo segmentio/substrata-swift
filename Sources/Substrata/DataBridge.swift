@@ -50,6 +50,6 @@ extension JSDataBridge {
         // we already have one fool!
         if self.engine != nil { return }
         self.engine = engine
-        engine.evaluate(script: "var \(JSDataBridge.dataBridgeKey) = {};")
+        engine.evaluate(script: "var \(JSDataBridge.dataBridgeKey) = {};", evaluator: "JSDataBridge.setEngine")
     }
 }

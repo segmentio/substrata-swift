@@ -36,9 +36,9 @@ internal class Builtins {
           }
           return output;
         }
-        """)
+        """, evaluator: "JSEngine.Builtins")
         
-        if let getInstanceMethodNames = engine.evaluate(script: "_getInstanceMethodNames")?.typed(as: JSFunction.self) {
+        if let getInstanceMethodNames = engine.evaluate(script: "_getInstanceMethodNames", evaluator: "JSEngine.Builtins.evaluate")?.typed(as: JSFunction.self) {
             functions["_getInstanceMethodNames"] = getInstanceMethodNames
         }
     }

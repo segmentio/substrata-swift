@@ -56,18 +56,28 @@ public class JSEngine {
         }
             
         if let jsSource = jsSource {
-            evaluate(script: jsSource)
+            evaluate(script: jsSource, evaluator: "JSEngine.loadBundle")
         }
         
         completion?(jsError)
     }
-
+    
     @discardableResult
     public func evaluate(script: String) -> JSConvertible? {
+        return evaluate(script: script, evaluator: Constants.Evaluator)
+    }
+
+    /// Evaluates a script and returns a result.
+    ///
+    /// params:
+    ///     - script: The script to evaluate
+    ///     - evaluator: An optional identifying name of the evaluator, useful in debugging.
+    @discardableResult
+    public func evaluate(script: String, evaluator: String) -> JSConvertible? {
         var outerResult: JSConvertible? = nil
         context.performThreadSafe { [weak self] in
             guard let self else { return }
-            let result = JS_Eval(context.ref, script, script.lengthOfBytes(using: .utf8), Constants.Evaluator, 0)
+            let result = JS_Eval(context.ref, script, script.lengthOfBytes(using: .utf8), evaluator, 0)
             outerResult = result.toJSConvertible(context: context)
             result.free(context)
         }
@@ -86,7 +96,7 @@ public class JSEngine {
     
     public func value(for keyPath: String) -> JSConvertible? {
         guard keyPath.count > 0 else { return nil }
-        let result = evaluate(script: keyPath)
+        let result = evaluate(script: keyPath, evaluator: "JSEngine.value")
         return result
     }
     
