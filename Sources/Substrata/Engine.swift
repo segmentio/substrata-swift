@@ -61,6 +61,11 @@ public class JSEngine {
         
         completion?(jsError)
     }
+    
+    @discardableResult
+    public func evaluate(script: String) -> JSConvertible? {
+        return evaluate(script: script, evaluator: Constants.Evaluator)
+    }
 
     /// Evaluates a script and returns a result.
     ///
@@ -68,12 +73,11 @@ public class JSEngine {
     ///     - script: The script to evaluate
     ///     - evaluator: An optional identifying name of the evaluator, useful in debugging.
     @discardableResult
-    public func evaluate(script: String, evaluator: String? = nil) -> JSConvertible? {
+    public func evaluate(script: String, evaluator: String) -> JSConvertible? {
         var outerResult: JSConvertible? = nil
-        let evalName = evaluator ?? Constants.Evaluator
         context.performThreadSafe { [weak self] in
             guard let self else { return }
-            let result = JS_Eval(context.ref, script, script.lengthOfBytes(using: .utf8), evalName, 0)
+            let result = JS_Eval(context.ref, script, script.lengthOfBytes(using: .utf8), evaluator, 0)
             outerResult = result.toJSConvertible(context: context)
             result.free(context)
         }
