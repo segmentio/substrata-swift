@@ -104,6 +104,12 @@ extern char **environ;
 #endif
 #endif
 
+#include <TargetConditionals.h>
+#if TARGET_OS_TV
+#define execve(file, argv, envp) ({ assert(!"execve() is not supported on tvOS"); -1; })
+#define fork() ({ assert(!"fork() is not supported on tvOS"); -1; })
+#endif
+
 /* TODO:
    - add socket calls
 */

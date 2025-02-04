@@ -72,4 +72,15 @@ static void js_decrement_refcount(JSValue v) {
 // comment out in quickjs.c in JS_FreeRuntime
 //assert(list_empty(&rt->gc_obj_list));
 
+// in quickjs-libc.c, add this after all the #includes and #defines.
+// -- this enables us to work on tvOS.  these functions are only used
+// for the file-io capabilities that we don't access.
+/*
+#include <TargetConditionals.h>
+#if TARGET_OS_TV
+#define execve(file, argv, envp) ({ assert(!"execve() is not supported on tvOS"); -1; })
+#define fork() ({ assert(!"fork() is not supported on tvOS"); -1; })
+#endif
+ */
+
 #endif // SEGMENT_H
