@@ -69,4 +69,7 @@ static void js_decrement_refcount(JSValue v) {
     ...
 }*/
 
+// comment out in quickjs.c in JS_FreeRuntime
+//assert(list_empty(&rt->gc_obj_list));
+
 #endif // SEGMENT_H

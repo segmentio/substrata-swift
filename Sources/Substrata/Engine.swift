@@ -28,8 +28,6 @@ public class JSEngine {
     }
     
     deinit {
-        JS_RunGC(runtime)
-        
         context.shutdown()
         JS_FreeRuntime(runtime)
     }
