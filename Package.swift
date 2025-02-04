@@ -31,7 +31,7 @@ let package = Package(
                 ]),*/
                 //.define("CONFIG_BIGNUM"),
                 //.define("CONFIG_ATOMICS"),
-                //.define("DUMP_LEAKS")
+                ///.define("DUMP_LEAKS")
             ]
         ),
         .target(
