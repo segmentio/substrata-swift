@@ -66,7 +66,7 @@ internal class JSContext {
             for value in activeJSClasses {
                 if JS_IsLiveObject(runtimeRef, value.value) > 0 {
                     let refs = js_get_refcount(value.value)
-                    if refs > 1 {
+                    if refs > 0 {
                         value.value.free(self)
                     }
                 }
@@ -75,7 +75,7 @@ internal class JSContext {
             for value in activeJSFunctions {
                 if JS_IsLiveObject(runtimeRef, value.value) > 0 {
                     let refs = js_get_refcount(value.value)
-                    if refs > 1 {
+                    if refs > 0 {
                         value.value.free(self)
                     }
                 }

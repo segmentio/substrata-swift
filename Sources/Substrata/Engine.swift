@@ -21,13 +21,15 @@ public class JSEngine {
         self.context = JSContext(runtime: runtime)
         self.bridge = JSDataBridge()
         
-        JS_SetMaxStackSize(runtime, 1024 * 1024)
+        JS_SetMaxStackSize(runtime, (1024 * 1024) * 10)
         JS_SetMemoryLimit(runtime, 1024 * 1024 * 1024)
         
         setupDefaultObjects()
     }
     
     deinit {
+        JS_RunGC(runtime)
+        
         context.shutdown()
         JS_FreeRuntime(runtime)
     }
