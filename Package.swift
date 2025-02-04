@@ -8,7 +8,7 @@ let package = Package(
     platforms: [
         .macOS("10.15"),
         .iOS("13.0"),
-        .tvOS("12.0")
+        .tvOS("12.0"),
     ],
     products: [
         // Products define the executables and libraries a package produces, making them visible to other packages.
@@ -31,17 +31,17 @@ let package = Package(
                 ]),*/
                 //.define("CONFIG_BIGNUM"),
                 //.define("CONFIG_ATOMICS"),
-                ///.define("DUMP_LEAKS")
+                //.define("DUMP_LEAKS")
             ]
         ),
         .target(
-            name: "Substrata", 
+            name: "Substrata",
             dependencies: ["SubstrataQuickJS"]),
         .testTarget(
             name: "SubstrataTests",
             dependencies: ["Substrata"],
             resources: [
                 .copy("Support/ConversionTestData.js")
-            ])
+            ]),
     ]
 )
