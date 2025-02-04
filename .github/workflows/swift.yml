@@ -30,7 +30,7 @@ jobs:
         uses: codecov/codecov-action@v4.0.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          slug: segment-integrations/substrata-swift
+          slug: segmentio/substrata-swift
 
   build_and_test_spm_mac:
     needs: cancel_previous
