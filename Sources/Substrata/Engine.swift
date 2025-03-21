@@ -21,8 +21,8 @@ public class JSEngine {
         self.context = JSContext(runtime: runtime)
         self.bridge = JSDataBridge()
         
-        JS_SetMaxStackSize(runtime, (1024 * 1024) * 10)
-        JS_SetMemoryLimit(runtime, 1024 * 1024 * 1024)
+        JS_SetMaxStackSize(runtime, (1024 * 1024) * 5)
+        JS_SetMemoryLimit(runtime, (1024 * 1024) * 100)
         
         setupDefaultObjects()
     }
@@ -30,6 +30,16 @@ public class JSEngine {
     deinit {
         context.shutdown()
         JS_FreeRuntime(runtime)
+    }
+    
+    public func setLimits(stackSize: UInt, heapSize: UInt) {
+        context.performThreadSafe {
+            // Ensure we don't set ridiculous values
+            let validatedStack = max(1024 * 64, min(stackSize, 1024 * 1024 * 64))  // 64KB min, 64MB max
+            let validatedHeap = max(1024 * 1024, min(heapSize, 1024 * 1024 * 1024))  // 1MB min, 1GB max
+            JS_SetMaxStackSize(runtime, size_t(validatedStack))
+            JS_SetMemoryLimit(runtime, size_t(validatedHeap))
+        }
     }
     
     public func shutdown() {
