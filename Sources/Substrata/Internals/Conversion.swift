@@ -46,17 +46,16 @@ internal func returnJSValueRef(context: JSContext, function: JSPropertySetterDef
 
 internal func jsArgsToTypes(context: JSContext?, argc: Int32, argv: UnsafeMutablePointer<JSValue>?) -> [JSConvertible] {
     var result = [JSConvertible]()
-    guard let argv, argc > 0 else { return result }
+    guard let argv = argv, argc > 0, argc <= Int32.max else { return result }
+    
     for i in 0..<Int(argc) {
+        guard i < Int(argc) else { break }  // Extra safety check
         if let v = argv[i].toJSConvertible(context: context) {
             result.append(v)
         } else {
-            // not sure this is the right thing to do but
-            // we don't want to just `skip` params.
             result.append(NSNull())
         }
     }
-    
     return result
 }
 
@@ -151,8 +150,6 @@ extension NSNumber: JSConvertible, JSInternalConvertible {
             return self.intValue.string
         }
     }
-    
-    
 }
 
 extension Double: JSConvertible, JSInternalConvertible {
@@ -410,7 +407,6 @@ public class JSClass: JSConvertible, JSInternalConvertible {
             if self.className != "Object" {
                 self.value = v
                 self.context = context
-                context.addActiveValue(value: self)
             } else {
                 v.free(context)
                 return nil
@@ -421,7 +417,7 @@ public class JSClass: JSConvertible, JSInternalConvertible {
     }
     
     deinit {
-        context?.freeActiveValue(value: self)
+        value.free(context)
     }
     
     public subscript(key: String) -> JSConvertible? {
@@ -525,14 +521,13 @@ public class JSFunction: JSConvertible, JSInternalConvertible {
             self.value = JS_DupValue(context.ref, value)
             self.context = context
             self.name = value.getFunctionName(context)
-            context.addActiveValue(value: self)
             return
         }
         return nil
     }
     
     deinit {
-        context?.freeActiveValue(value: self)
+        value.free(context)
     }
     
     internal func callRaw(args: [JSValue]?) -> JSValue? {

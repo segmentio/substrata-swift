@@ -107,7 +107,12 @@ open class JSExport {
             #endif
             return
         }
-        _exportedMethods[named] = function
+        let wrappedFunction: JSFunctionDefinition = { [weak self] args in
+            guard self != nil else { return nil }
+            return function(args)  // function captures 'self' strongly, but our wrapper holds it weakly
+        }
+        
+        _exportedMethods[named] = wrappedFunction
     }
     
     private var _exportedProperties = [String: JSProperty]()

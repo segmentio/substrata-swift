@@ -40,7 +40,7 @@ internal class JSClassInfo {
 
 internal class JSClassInstanceInfo {
     let classID: JSClassID
-    let instance: JSExport?
+    weak var instance: JSExport?
     let type: JSExport.Type
     
     init(type: JSExport.Type, classID: JSClassID, instance: JSExport?) {

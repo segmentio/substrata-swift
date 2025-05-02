@@ -27,7 +27,6 @@ internal class Builtins {
               .forEach (name => {
                 if (name !== 'constructor' && !name.includes("_")) {
                   if (_hasMethod (proto, name)) {
-                    //array.push (obj[name]);
                     output[name] = obj[name];
                   }
                 }

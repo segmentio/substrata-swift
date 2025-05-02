@@ -62,8 +62,6 @@ internal func typedConstruct(context: JSContextRef?, this: JSValue, magic: Int32
         instance.construct(args: args)
     }
     
-    context.addExport(instance: classInstance)
-    
     // set up our instance properties ...
     let properties = instance.exportedProperties
     for export in properties {

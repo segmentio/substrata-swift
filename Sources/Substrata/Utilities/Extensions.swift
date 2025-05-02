@@ -74,8 +74,9 @@ extension JSValue {
     
     internal func free(_ context: JSContext?) {
         guard let context else { return }
-        OSMemoryBarrier()
-        JS_FreeValue(context.ref, self)
+        context.performThreadSafe {
+            JS_FreeValue(context.ref, self)
+        }
     }
     
     internal func hasProperty(context: JSContext?, string: String) -> Bool {

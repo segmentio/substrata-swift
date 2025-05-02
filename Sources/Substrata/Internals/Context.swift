@@ -24,10 +24,7 @@ internal class JSContext {
     internal var functions = [Int32: JSFunctionDefinition]()
     internal var propertyGetters = [Int32: JSPropertyGetterDefinition]()
     internal var propertySetters = [Int32: JSPropertySetterDefinition]()
-    internal var instances = [JSClassInstanceInfo]()
     internal var methodIDs = [Int32: String]()
-    internal var activeJSClasses = [JSClass]()
-    internal var activeJSFunctions = [JSFunction]()
     
     internal var builtIns: Builtins?
     internal let globalRef: JSValue
@@ -55,86 +52,20 @@ internal class JSContext {
         }
         
         executionLock.perform {
+            builtIns?.free()
+            
             ref.opaqueContext = nil
-            
-            // this feels sketchy .. if we free things down to a refcount of 0
-            // it seems hit or miss whether quickjs will blow up or not.  keeping
-            // it to one takes care of things such that it can manage the last bits
-            // on it's own.  object ownership is a little murky, but we're gonna
-            // let quickjs win.
-            
-            for value in activeJSClasses {
-                if JS_IsLiveObject(runtimeRef, value.value) > 0 {
-                    let refs = js_get_refcount(value.value)
-                    if refs > 0 {
-                        value.value.free(self)
-                    }
-                }
-            }
-            
-            for value in activeJSFunctions {
-                if JS_IsLiveObject(runtimeRef, value.value) > 0 {
-                    let refs = js_get_refcount(value.value)
-                    if refs > 0 {
-                        value.value.free(self)
-                    }
-                }
-            }
-            
             globalRef.free(self)
-            
             JS_FreeContext(ref)
             
             // make sure everything gets dropped;
             // we have a completely non-functional js engine now,
             // and can't have any leaks happening from object tracking.
-            activeJSClasses.removeAll()
-            activeJSFunctions.removeAll()
             classes.removeAll()
             functions.removeAll()
             propertyGetters.removeAll()
             propertySetters.removeAll()
-            instances.removeAll()
             methodIDs.removeAll()
-        }
-    }
-    
-    func addActiveValue(value: JSFunction) {
-        if isShuttingDown {
-            value.value.free(self)
-            return
-        }
-        
-        exportLock.perform {
-            activeJSFunctions.append(value)
-        }
-    }
-    
-    func addActiveValue(value: JSClass) {
-        if isShuttingDown {
-            value.value.free(self)
-            return
-        }
-        exportLock.perform {
-            activeJSClasses.append(value)
-        }
-    }
-    
-    func freeActiveValue(value: JSFunction) {
-        if isShuttingDown { return }
-        
-        exportLock.perform {
-            activeJSFunctions.remove(value)
-            value.value.free(self)
-        }
-    }
-    
-    func freeActiveValue(value: JSClass) {
-        if isShuttingDown { return }
-        
-        exportLock.perform {
-            activeJSClasses.remove(value)
-            value.value.free(self)
         }
     }
 }
@@ -242,12 +173,6 @@ extension JSContext {
                 return classInfo.type == classType
             }
             return found.first?.value
-        }
-    }
-    
-    func addExport(instance: JSClassInstanceInfo) {
-        exportLock.perform {
-            instances.append(instance)
         }
     }
     

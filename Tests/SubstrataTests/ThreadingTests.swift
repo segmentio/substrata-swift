@@ -18,6 +18,20 @@ final class ThreadingTests: XCTestCase {
         // Put teardown code here. This method is called after the invocation of each test method in the class.
     }
     
+    /*func testMemoryOverTime() throws {
+        let queue = DispatchQueue(label: "testMemoryOverTime")
+        queue.async {
+            for _ in 0..<1000 {
+                autoreleasepool {
+                    try? self.testSingleEngineMultiThreads()
+                    //try? self.testMultiEngineThreads()
+                }
+            }
+        }
+        
+        RunLoop.current.run()
+    }*/
+    
     func testHammerTime() throws {
         for _ in 0..<50 {
             autoreleasepool {
