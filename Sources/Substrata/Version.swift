@@ -14,4 +14,4 @@
 
 // BREAKING.FEATURE.FIX
 
-internal let __substrata_version = "2.0.10"
+internal let __substrata_version = "2.0.11"
