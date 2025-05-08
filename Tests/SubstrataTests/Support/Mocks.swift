@@ -8,6 +8,45 @@
 import Foundation
 @testable import Substrata
 
+class ThrowingConstructorJS: JSExport, JSStatic {
+    static func staticInit() {
+        
+    }
+    
+    enum ErrorTest: String, Error {
+        case constructor
+        case function
+        case getter
+        case setter
+    }
+    
+    required init() {
+        super.init()
+        
+        exportMethod(named: "noThrowFunc") { args in
+            print("noThrowFunc")
+            return 3
+        }
+        
+        exportMethod(named: "throwFunc") { args in
+            print("throwFunc")
+            throw ErrorTest.function
+        }
+        
+        exportProperty(named: "throwProp") {
+            throw ErrorTest.getter
+        } setter: { value in
+            throw ErrorTest.setter
+        }
+    }
+    
+    override func construct(args: [JSConvertible?]) throws {
+        if let shouldThrow = args.first as? Bool, shouldThrow {
+            throw ErrorTest.constructor
+        }
+    }
+}
+
 class EdgeFunctionJS: JSExport, JSStatic {
     static var myStaticBool: Bool? = true
     var myBool: Bool? = false

@@ -18,6 +18,55 @@ final class ConversionTests: XCTestCase {
         // Put teardown code here. This method is called after the invocation of each test method in the class.
         EdgeFunctionJS.reset()
     }
+    
+    func testNativeThrowingConstructor() throws {
+        let engine = JSEngine()
+        var exceptionHit = false
+        engine.exceptionHandler = { error in
+            exceptionHit = true
+            print(error.jsDescription())
+        }
+        
+        engine.export(type: ThrowingConstructorJS.self, className:"ThrowingConstructor")
+        
+        // test constructor
+        let r = engine.evaluate(script: "let x = new ThrowingConstructor(true);")
+        XCTAssertNotNil(r)
+        XCTAssertTrue(exceptionHit)
+    }
+    
+    func testNativeThrowingOtherStuff() throws {
+        let engine = JSEngine()
+        var exceptionHit = false
+        engine.exceptionHandler = { error in
+            exceptionHit = true
+            print(error.jsDescription())
+        }
+        
+        engine.export(type: ThrowingConstructorJS.self, className: "ThrowingConstructor")
+        
+        // test function
+        exceptionHit = false
+        var r = engine.evaluate(script: "let y = new ThrowingConstructor(false);")
+        XCTAssertNil(r)
+        let b = engine.evaluate(script: "y.noThrowFunc()")?.typed(as: Int.self)
+        XCTAssertEqual(b, 3)
+        r = engine.evaluate(script: "y.throwFunc()")
+        XCTAssertNotNil(r)
+        XCTAssertTrue(exceptionHit)
+        
+        // test getter
+        exceptionHit = false
+        r = engine.evaluate(script: "y.throwProp")
+        XCTAssertNotNil(r)
+        XCTAssertTrue(exceptionHit)
+        
+        // test setter
+        exceptionHit = false
+        r = engine.evaluate(script: "y.throwProp = 5")
+        XCTAssertNotNil(r)
+        XCTAssertTrue(exceptionHit)
+    }
 
     func testMassConversionOut() throws {
         let engine = JSEngine()

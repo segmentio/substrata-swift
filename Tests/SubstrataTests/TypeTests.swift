@@ -91,8 +91,8 @@ final class TypeTests: XCTestCase {
         let r = engine.evaluate(script: "Error('test')")?.typed(as: JSError.self)!
         XCTAssertNotNil(r)
         let out = r!.toJSValue(context: engine.context)
-        // we won't make an error on the native side.
-        XCTAssertNil(out)
+        // we WILL make an error on the native side.
+        XCTAssertNotNil(out)
     }
 
     func testInt() throws {

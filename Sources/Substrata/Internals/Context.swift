@@ -71,6 +71,16 @@ internal class JSContext {
 }
 
 extension JSContext {
+    func throwError(_ error: Error) -> JSValue {
+        let jsError = JSError.from(error)
+        if let errorValue = jsError.toJSValue(context: self) {
+            return JS_Throw(self.ref, errorValue)
+        }
+        return JS_Throw(self.ref, JS_NewError(self.ref))
+    }
+}
+
+extension JSContext {
     func newContextClassID() -> Int32 {
         return exportLock.perform {
             let new = classCounter

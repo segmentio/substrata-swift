@@ -59,7 +59,20 @@ internal func typedConstruct(context: JSContextRef?, this: JSValue, magic: Int32
     JS_FreeAtom(context.ref, instanceAtom)
     
     if classType.waitingToAttach == nil {
-        instance.construct(args: args)
+        do {
+            try instance.construct(args: args)
+        } catch {
+            // Clean up the resources we allocated
+            result.free(context)
+            ptr.deallocate()
+            
+            let jsError = JSError.from(error)
+            if let errorValue = jsError.toJSValue(context: context) {
+                return JS_Throw(context.ref, errorValue)
+            }
+            
+            return JS_Throw(context.ref, JS_NewError(context.ref))
+        }
     }
     
     // set up our instance properties ...

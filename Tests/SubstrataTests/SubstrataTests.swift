@@ -59,6 +59,9 @@ class MyJSClass: JSExport, JSStatic {
         super.init()
         
         exportMethod(named: "test", function: test)
+        exportMethod(named: "test2", function: { args in
+            return 3
+        })
         
         exportProperty(named: "myInstanceProperty", getter: {
             return self.myInstanceProperty
@@ -205,6 +208,18 @@ final class SubstrataTests: XCTestCase {
             
         let result = v?.call(method: "test", args: nil)?.typed(as: Int.self)
         XCTAssertEqual(result, 1337)
+    }
+    
+    func testExportInstanceMethod() {
+        let engine = JSEngine()
+        
+        engine.export(type: MyJSClass.self, className: "MyJSClass")
+        engine.evaluate(script: "let x = new MyJSClass()")
+        var result = engine.evaluate(script: "x.test()")?.typed(as: Int.self)
+        XCTAssertEqual(result, 42)
+        
+        result = engine.evaluate(script: "x.test2()")?.typed(as: Int.self)
+        XCTAssertEqual(result, 3)
     }
     
     func testStaticProperties() {

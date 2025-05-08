@@ -30,14 +30,14 @@ extension JSConvertible {
     }
 }
 
-public typealias JSFunctionDefinition = ([JSConvertible?]) -> JSConvertible?
+public typealias JSFunctionDefinition = ([JSConvertible?]) throws -> JSConvertible?
 
 public protocol JSStatic {
     static func staticInit()
 }
 
-public typealias JSPropertyGetterDefinition = () -> JSConvertible?
-public typealias JSPropertySetterDefinition = (JSConvertible?) -> Void
+public typealias JSPropertyGetterDefinition = () throws -> JSConvertible?
+public typealias JSPropertySetterDefinition = (JSConvertible?) throws -> Void
 
 public class JSProperty {
     internal let getter: JSPropertyGetterDefinition
@@ -109,7 +109,7 @@ open class JSExport {
         }
         let wrappedFunction: JSFunctionDefinition = { [weak self] args in
             guard self != nil else { return nil }
-            return function(args)  // function captures 'self' strongly, but our wrapper holds it weakly
+            return try function(args)  // function captures 'self' strongly, but our wrapper holds it weakly
         }
         
         _exportedMethods[named] = wrappedFunction
@@ -135,5 +135,5 @@ open class JSExport {
     
     // Overrides
     public required init() {}
-    open func construct(args: [JSConvertible?]) {}
+    open func construct(args: [JSConvertible?]) throws {}
 }
