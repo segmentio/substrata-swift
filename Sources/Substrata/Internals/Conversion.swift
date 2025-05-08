@@ -11,37 +11,42 @@ import SubstrataQuickJS
 // MARK: - Call conversion funcs
 
 internal func returnJSValueRef(context: JSContext, function: JSFunctionDefinition, args: [JSConvertible]) -> JSValue {
-    // make sure we're consistent with our types.
-    // nil = undefined in js.
-    // nsnull = null in js.
-    var result = JSValue.undefined
-    let v = function(args) as? JSInternalConvertible
-    if let v = v?.toJSValue(context: context) {
-        result = v
+    do {
+        let v = try function(args) as? JSInternalConvertible
+        if let v = v?.toJSValue(context: context) {
+            return v
+        }
+        return JSValue.undefined
+    } catch {
+        return context.throwError(error)
     }
-
-    return result
 }
 
 internal func returnJSValueRef(context: JSContext, function: JSPropertyGetterDefinition) -> JSValue {
     // make sure we're consistent with our types.
     // nil = undefined in js.
     // nsnull = null in js.
-    var result = JSValue.undefined
-    let v = function() as? JSInternalConvertible
-    if let v = v?.toJSValue(context: context) {
-        result = v
+    do {
+        let v = try function() as? JSInternalConvertible
+        if let v = v?.toJSValue(context: context) {
+            return v
+        }
+        return JSValue.undefined
+    } catch {
+        return context.throwError(error)
     }
-
-    return result
 }
 
 internal func returnJSValueRef(context: JSContext, function: JSPropertySetterDefinition, arg: JSConvertible?) -> JSValue {
     // make sure we're consistent with our types.
     // nil = undefined in js.
     // nsnull = null in js.
-    function(arg)
-    return JSValue.undefined
+    do {
+        try function(arg)
+        return JSValue.undefined
+    } catch {
+        return context.throwError(error)
+    }
 }
 
 internal func jsArgsToTypes(context: JSContext?, argc: Int32, argv: UnsafeMutablePointer<JSValue>?) -> [JSConvertible] {
@@ -610,10 +615,44 @@ public final class JSError: JSConvertible, JSInternalConvertible {
     }
     
     internal func toJSValue(context: JSContext) -> JSValue? {
-        // it's not expected that JS errors are created in native
-        // and flow back into JS.
-        return nil
+        // Create the base error object
+        let errorValue = JS_NewError(context.ref)
+        
+        // Set the message if we have it
+        if let message = self.message {
+            let messageAtom = JS_NewAtom(context.ref, "message")
+            let messageValue = JS_NewString(context.ref, message)
+            JS_SetProperty(context.ref, errorValue, messageAtom, messageValue)
+            JS_FreeAtom(context.ref, messageAtom)
+        }
+        
+        // Set the name if we have it
+        if let name = self.name {
+            let nameAtom = JS_NewAtom(context.ref, "name")
+            let nameValue = JS_NewString(context.ref, name)
+            JS_SetProperty(context.ref, errorValue, nameAtom, nameValue)
+            JS_FreeAtom(context.ref, nameAtom)
+        }
+        
+        // Set the cause if we have it
+        if let cause = self.cause {
+            let causeAtom = JS_NewAtom(context.ref, "cause")
+            let causeValue = JS_NewString(context.ref, cause)
+            JS_SetProperty(context.ref, errorValue, causeAtom, causeValue)
+            JS_FreeAtom(context.ref, causeAtom)
+        }
+        
+        // Set the stack if we have it
+        if let stack = self.stack {
+            let stackAtom = JS_NewAtom(context.ref, "stack")
+            let stackValue = JS_NewString(context.ref, stack)
+            JS_SetProperty(context.ref, errorValue, stackAtom, stackValue)
+            JS_FreeAtom(context.ref, stackAtom)
+        }
+        
+        return errorValue
     }
+    
     
     public var string: String {
         return """
@@ -624,12 +663,23 @@ public final class JSError: JSConvertible, JSInternalConvertible {
         """
     }
     
+    static func from(_ error: Error) -> JSError {
+        return JSError(message: error.localizedDescription)
+    }
+    
     internal init(value: JSValue, context: JSContext) {
         name = Self.value(for: "name", object: value, context: context)
         message = Self.value(for: "message", object: value, context: context)
         // TODO: cause can sometimes be an error, which makes the output look funky.  Fix it.
         cause = Self.value(for: "cause", object: value, context: context)
         stack = Self.value(for: "stack", object: value, context: context)
+    }
+    
+    internal init(name: String? = "Native Code Exception", message: String?, cause: String? = nil, stack: String? = nil) {
+        self.name = name
+        self.message = message
+        self.cause = cause
+        self.stack = stack
     }
     
     internal let name: String?
