@@ -129,5 +129,21 @@ final class ConversionTests: XCTestCase {
         XCTAssertTrue((nestedDict["anArray"] as! [JSConvertible]).count == 4)
     }
 
-
+    func testMassConversionIn() throws {
+        // expand this later ... just doing date for now.
+        let engine = JSEngine()
+        engine.exceptionHandler = { error in
+            XCTFail()
+            print(error)
+        }
+        
+        // test date ...
+        let isoFormatter = ISO8601DateFormatter()
+        let date = isoFormatter.date(from: "2024-05-01T12:00:00Z")!
+        engine.setValue(date, for: "aDate")
+        let jsdate = engine.value(for: "aDate")!.typed(as: Date.self)!
+        XCTAssertEqual(
+            Int64(jsdate.timeIntervalSince1970 * 1000), 1714564800000  // expected epoch ms for 2024-05-01T12:00:00Z
+        )
+    }
 }
