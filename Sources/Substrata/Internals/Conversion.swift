@@ -257,6 +257,35 @@ extension Decimal: JSConvertible, JSInternalConvertible {
     }
 }
 
+extension Date: JSConvertible, JSInternalConvertible {
+    var string: String {
+        return self.description
+    }
+    
+    internal static func fromJSValue(_ value: JSValue, context: JSContext) -> Date? {
+        // If it's an object, verify it's a Date instance
+        if JS_IsObject(value) > 0 {
+            let globalObj = JS_GetGlobalObject(context.ref)
+            let dateCtor  = JS_GetPropertyStr(context.ref, globalObj, "Date")
+            let isDate    = JS_IsInstanceOf(context.ref, value, dateCtor) > 0
+            JS_FreeValue(context.ref, dateCtor)
+            JS_FreeValue(context.ref, globalObj)
+            if !isDate { return nil }
+        }
+        var ms = 0.0
+        if JS_ToFloat64(context.ref, &ms, value) == 0, ms.isFinite {
+            return Date(timeIntervalSince1970: ms / 1000.0)
+        }
+        return nil
+    }
+    
+    internal func toJSValue(context: JSContext) -> JSValue? {
+        let ms = timeIntervalSince1970 * 1000.0  // seconds → ms
+        let v = JS_NewDate(context.ref, ms)
+        return v
+    }
+}
+
 extension Dictionary: JSConvertible, JSInternalConvertible where Key == String, Value == JSConvertible {
     static func fromJSValue(_ value: JSValue, context: JSContext) -> Dictionary<Key, Value>? {
         if JS_IsObject(value) > 0 {

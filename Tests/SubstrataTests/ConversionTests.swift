@@ -97,6 +97,12 @@ final class ConversionTests: XCTestCase {
         XCTAssertTrue((samples!["anArray"]! as! [JSConvertible]).count == 6)
         XCTAssertTrue((samples!["aDictionary"]!.typed(as: Dictionary.self))!.keys.count == 7)
         
+        // test date ...
+        let date = samples!["aDate"]!.typed(as: Date.self)!
+        XCTAssertEqual(
+            Int64(date.timeIntervalSince1970 * 1000), 1714564800000  // expected epoch ms for 2024-05-01T12:00:00Z
+        )
+        
         // test nested array stuff ...
         let array = samples!["anArray"]!.typed(as: Array.self)
         let subArray = array![4] as! [JSConvertible]
@@ -123,5 +129,21 @@ final class ConversionTests: XCTestCase {
         XCTAssertTrue((nestedDict["anArray"] as! [JSConvertible]).count == 4)
     }
 
-
+    func testMassConversionIn() throws {
+        // expand this later ... just doing date for now.
+        let engine = JSEngine()
+        engine.exceptionHandler = { error in
+            XCTFail()
+            print(error)
+        }
+        
+        // test date ...
+        let isoFormatter = ISO8601DateFormatter()
+        let date = isoFormatter.date(from: "2024-05-01T12:00:00Z")!
+        engine.setValue(date, for: "aDate")
+        let jsdate = engine.value(for: "aDate")!.typed(as: Date.self)!
+        XCTAssertEqual(
+            Int64(jsdate.timeIntervalSince1970 * 1000), 1714564800000  // expected epoch ms for 2024-05-01T12:00:00Z
+        )
+    }
 }

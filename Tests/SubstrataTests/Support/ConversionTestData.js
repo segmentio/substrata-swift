@@ -1,4 +1,5 @@
 const conversionSamples = {
+    aDate: new Date("2024-05-01T12:00:00Z"),
     anInt: 1234,
     aBool: true,
     anotherBool: false,
