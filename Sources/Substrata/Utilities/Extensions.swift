@@ -144,6 +144,7 @@ extension JSValue {
             }
         }
         
+        if let v = Date.fromJSValue(value, context: context) { return v }
         if let v = Array<JSConvertible>.fromJSValue(value, context: context) { return v }
         if let v = JSFunction.fromJSValue(value, context: context) { return v }
         if let v = JSError.fromJSValue(value, context: context) { return v }
